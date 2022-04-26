@@ -1,13 +1,18 @@
 import os
 import time
 
+try:
+  import usocket as socket
+except:
+  import socket
+
 import dht
 import machine
 
 import sdcard
+import wifimgr
 from bmp180 import BMP180
 from i2c_lcd import I2cLcd
-from lcd_api import LcdApi
 
 led = machine.Pin(2, machine.Pin.OUT)
 led.on()
@@ -36,6 +41,12 @@ lcd.clear()
 lcd.putstr("    IoT Based\nWeather Station!")
 time.sleep(1)
 lcd.clear()
+
+wlan = wifimgr.get_connection()
+if wlan is None:
+    print("Could not initialize the network connection.")
+
+print("WiFi OK")
 
 lcd.putstr("BMP180..")
 bmp180 = BMP180(i2c)
