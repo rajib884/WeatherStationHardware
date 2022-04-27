@@ -1,16 +1,20 @@
 import os
-import time
+try:
+    import utime as time
+except:
+    import time
 
 try:
-  import usocket as socket
+    import usocket as socket
 except:
-  import socket
+    import socket
 
 import dht
 import machine
 
 import sdcard
-import wifimgr
+# import wifimgr
+from ntime import Time
 from bmp180 import BMP180
 from i2c_lcd import I2cLcd
 
@@ -39,14 +43,20 @@ lcd = I2cLcd(i2c, 0x27, 2, 16)
 
 lcd.clear()
 lcd.putstr("    IoT Based\nWeather Station!")
+
+time.sleep(3)
+datetime = Time()
+print(f"Time is {datetime.datetime_str}")
+lcd.clear()
+lcd.putstr(f"   {datetime.date_str}       {datetime.time_str}")
 time.sleep(1)
 lcd.clear()
 
-wlan = wifimgr.get_connection()
-if wlan is None:
-    print("Could not initialize the network connection.")
+# wlan = wifimgr.get_connection()
+# if wlan is None:
+# print("Could not initialize the network connection.")
 
-print("WiFi OK")
+# print("WiFi OK")
 
 lcd.putstr("BMP180..")
 bmp180 = BMP180(i2c)
@@ -66,12 +76,14 @@ lcd.move_to(0, 1)
 lcd.putstr("SD Card Mounted")
 
 while 1:
+    lcd.backlight_on()
     bmp180.blocking_read()
     dht11.measure()
-    with open('/sd/Sensor Data.csv', 'a') as f:
-        t = f"{bmp180.temperature},{bmp180.pressure},{dht11.temperature():3.1f},{dht11.humidity():3.1f}\n"
-        print(t)
+    with open(f'/sd/{datetime.date_str}.csv', 'a') as f:
+        t = f"{datetime.datetime_str},{bmp180.temperature:07.4f},{bmp180.pressure:06.0f},{dht11.temperature():02d},{dht11.humidity():02d}\n"
+        print(t, end="")
         lcd.clear()
-        lcd.putstr(t)
+        lcd.putstr(t[11:])
         f.write(t)
+    lcd.backlight_off()
     time.sleep(2)
