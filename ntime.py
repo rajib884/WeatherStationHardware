@@ -24,7 +24,7 @@ class Time:
         self.gmt = 6
         self.update_interval = 3600
         self._last_updated = 0
-        self._update()
+        self._update(force=True)
     
     def ntp_time(self):
         NTP_QUERY = bytearray(48)
@@ -70,8 +70,8 @@ class Time:
         # HH:MM:SS
         return f"{tm[3]:02d}:{tm[4]:02d}:{tm[5]:02d}"
 
-    def _update(self):
-        if time.time() - self._last_updated > self.update_interval:
+    def _update(self, force=False):
+        if force or time.time() - self._last_updated > self.update_interval:
             try:
                 print("Synchronizing time with NTP")
                 self.settime()
