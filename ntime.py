@@ -26,7 +26,7 @@ class Time:
         self._last_updated = 0
         self._update()
     
-    def time(self):
+    def ntp_time(self):
         NTP_QUERY = bytearray(48)
         NTP_QUERY[0] = 0x1B
         addr = socket.getaddrinfo(self.host, 123)[0][-1]
@@ -41,20 +41,34 @@ class Time:
         return val - self.NTP_DELTA + self.gmt*3600
     
     def settime(self):
-        t = self.time()
+        t = self.ntp_time()
         tm = time.gmtime(t)
         machine.RTC().datetime((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
 
-    @property
-    def now(self):
+    def time(self):
         self._update()
         return time.time()
 
     @property
-    def now_str(self):
+    def datetime_str(self):
         self._update()
         tm = time.localtime()
-        return f"{tm[2]}/{tm[1]}/{tm[0]} {tm[3]}:{tm[4]}:{tm[5]}"
+        # Year-Month-Day HH:MM:SS
+        return f"{tm[0]:04d}-{tm[1]:02d}-{tm[2]:02d} {tm[3]:02d}:{tm[4]:02d}:{tm[5]:02d}"
+
+    @property
+    def date_str(self):
+        self._update()
+        tm = time.localtime()
+        # Year-Month-Day
+        return f"{tm[0]:04d}-{tm[1]:02d}-{tm[2]:02d}"
+
+    @property
+    def time_str(self):
+        self._update()
+        tm = time.localtime()
+        # HH:MM:SS
+        return f"{tm[3]:02d}:{tm[4]:02d}:{tm[5]:02d}"
 
     def _update(self):
         if time.time() - self._last_updated > self.update_interval:
