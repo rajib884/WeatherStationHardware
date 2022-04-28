@@ -30,13 +30,14 @@ from machine import I2C, Pin
 import math
 import time
 
+
 # BMP180 class
 class BMP180():
     '''
     Module for the BMP180 pressure sensor.
     '''
 
-    _bmp_addr = 119             # adress of BMP180 is hardcoded on the sensor
+    _bmp_addr = 119  # adress of BMP180 is hardcoded on the sensor
 
     # init
     def __init__(self, i2c_bus):
@@ -69,7 +70,7 @@ class BMP180():
         self.MSB_raw = None
         self.LSB_raw = None
         self.XLSB_raw = None
-        self.gauge = self.makegauge() # Generator instance
+        self.gauge = self.makegauge()  # Generator instance
         for _ in range(128):
             next(self.gauge)
             time.sleep_ms(1)
@@ -78,7 +79,7 @@ class BMP180():
         '''
         Returns a list of all compensation values
         '''
-        return [self._AC1, self._AC2, self._AC3, self._AC4, self._AC5, self._AC6, 
+        return [self._AC1, self._AC2, self._AC3, self._AC4, self._AC5, self._AC6,
                 self._B1, self._B2, self._MB, self._MC, self._MD, self.oversample_setting]
 
     # gauge raw
@@ -90,13 +91,13 @@ class BMP180():
         while True:
             self._bmp_i2c.writeto_mem(self._bmp_addr, 0xF4, bytearray([0x2E]))
             t_start = time.ticks_ms()
-            while (time.ticks_ms() - t_start) <= 5: # 5mS delay
+            while (time.ticks_ms() - t_start) <= 5:  # 5mS delay
                 yield None
             try:
                 self.UT_raw = self._bmp_i2c.readfrom_mem(self._bmp_addr, 0xF6, 2)
             except:
                 yield None
-            self._bmp_i2c.writeto_mem(self._bmp_addr, 0xF4, bytearray([0x34+(self.oversample_setting << 6)]))
+            self._bmp_i2c.writeto_mem(self._bmp_addr, 0xF4, bytearray([0x34 + (self.oversample_setting << 6)]))
             t_pressure_ready = delays[self.oversample_setting]
             t_start = time.ticks_ms()
             while (time.ticks_ms() - t_start) <= t_pressure_ready:
@@ -110,7 +111,7 @@ class BMP180():
             yield True
 
     def blocking_read(self):
-        if next(self.gauge) is not None: # Discard old data
+        if next(self.gauge) is not None:  # Discard old data
             pass
         while next(self.gauge) is None:
             pass
@@ -137,10 +138,10 @@ class BMP180():
             UT = unp('>H', self.UT_raw)[0]
         except:
             return 0.0
-        X1 = (UT-self._AC6)*self._AC5/2**15
-        X2 = self._MC*2**11/(X1+self._MD)
-        self.B5_raw = X1+X2
-        return (((X1+X2)+8)/2**4)/10
+        X1 = (UT - self._AC6) * self._AC5 / 2 ** 15
+        X2 = self._MC * 2 ** 11 / (X1 + self._MD)
+        self.B5_raw = X1 + X2
+        return (((X1 + X2) + 8) / 2 ** 4) / 10
 
     @property
     def pressure(self):
@@ -155,25 +156,25 @@ class BMP180():
             XLSB = unp('B', self.XLSB_raw)[0]
         except:
             return 0.0
-        UP = ((MSB << 16)+(LSB << 8)+XLSB) >> (8-self.oversample_setting)
-        B6 = self.B5_raw-4000
-        X1 = (self._B2*(B6**2/2**12))/2**11
-        X2 = self._AC2*B6/2**11
-        X3 = X1+X2
-        B3 = ((int((self._AC1*4+X3)) << self.oversample_setting)+2)/4
-        X1 = self._AC3*B6/2**13
-        X2 = (self._B1*(B6**2/2**12))/2**16
-        X3 = ((X1+X2)+2)/2**2
-        B4 = abs(self._AC4)*(X3+32768)/2**15
-        B7 = (abs(UP)-B3) * (50000 >> self.oversample_setting)
+        UP = ((MSB << 16) + (LSB << 8) + XLSB) >> (8 - self.oversample_setting)
+        B6 = self.B5_raw - 4000
+        X1 = (self._B2 * (B6 ** 2 / 2 ** 12)) / 2 ** 11
+        X2 = self._AC2 * B6 / 2 ** 11
+        X3 = X1 + X2
+        B3 = ((int((self._AC1 * 4 + X3)) << self.oversample_setting) + 2) / 4
+        X1 = self._AC3 * B6 / 2 ** 13
+        X2 = (self._B1 * (B6 ** 2 / 2 ** 12)) / 2 ** 16
+        X3 = ((X1 + X2) + 2) / 2 ** 2
+        B4 = abs(self._AC4) * (X3 + 32768) / 2 ** 15
+        B7 = (abs(UP) - B3) * (50000 >> self.oversample_setting)
         if B7 < 0x80000000:
-            pressure = (B7*2)/B4
+            pressure = (B7 * 2) / B4
         else:
-            pressure = (B7/B4)*2
-        X1 = (pressure/2**8)**2
-        X1 = (X1*3038)/2**16
-        X2 = (-7357*pressure)/2**16
-        return pressure+(X1+X2+3791)/2**4
+            pressure = (B7 / B4) * 2
+        X1 = (pressure / 2 ** 8) ** 2
+        X1 = (X1 * 3038) / 2 ** 16
+        X2 = (-7357 * pressure) / 2 ** 16
+        return pressure + (X1 + X2 + 3791) / 2 ** 4
 
     @property
     def altitude(self):
@@ -181,7 +182,7 @@ class BMP180():
         Altitude in m.
         '''
         try:
-            p = -7990.0*math.log(self.pressure/self.baseline)
+            p = -7990.0 * math.log(self.pressure / self.baseline)
         except:
             p = 0.0
         return p

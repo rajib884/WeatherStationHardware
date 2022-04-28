@@ -1,18 +1,7 @@
 import machine
-try:
-    import utime as time
-except:
-    import time
-try:
-    import usocket as socket
-except:
-    import socket
-try:
-    import ustruct as struct
-except:
-    import struct
-
-
+import time
+import socket
+import struct
 
 class Time:
     def __init__(self) -> None:
