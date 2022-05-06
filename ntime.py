@@ -2,6 +2,8 @@ import machine
 import time
 import socket
 import struct
+import urequests as requests
+
 
 class Time:
     def __init__(self) -> None:
@@ -14,7 +16,7 @@ class Time:
         self.update_interval = 3600
         self._last_updated = 0
         self._update(force=True)
-    
+
     def ntp_time(self):
         NTP_QUERY = bytearray(48)
         NTP_QUERY[0] = 0x1B
@@ -27,12 +29,19 @@ class Time:
         finally:
             s.close()
         val = struct.unpack("!I", msg[40:44])[0]
-        return val - self.NTP_DELTA + self.gmt*3600
-    
+        return val - self.NTP_DELTA + self.gmt * 3600
+
     def settime(self):
         t = self.ntp_time()
         tm = time.gmtime(t)
         machine.RTC().datetime((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
+
+    def set_time_from_api(self):
+        r = requests.get('http://192.168.0.103:8000/api/time', headers={'Content-Type': 'application/json'})
+        if r.status_code == 200:
+            tm = time.gmtime(int(r.content.decode()))
+            machine.RTC().datetime((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
+            
 
     def time(self):
         self._update()
@@ -62,8 +71,17 @@ class Time:
     def _update(self, force=False):
         if force or time.time() - self._last_updated > self.update_interval:
             try:
+                print("Synchronizing time with API")
+                self.set_time_from_api()
+                self._last_updated = time.time()
+                return
+            except:
+                print("Synchronization Failed")
+
+            try:
                 print("Synchronizing time with NTP")
                 self.settime()
                 self._last_updated = time.time()
+                return
             except:
                 print("Synchronization Failed")

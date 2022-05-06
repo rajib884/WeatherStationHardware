@@ -1,10 +1,13 @@
 import os
 import time
 
-import socket
-
 import dht
 import machine
+import json
+try:
+    import urequests as requests
+except ModuleNotFoundError:
+    import requests
 
 import sdcard
 # import wifimgr
@@ -86,6 +89,18 @@ def main():
 
     time.sleep_ms(500)
     lcd.clear()
+
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token 966259f9553c20f6620737dc334b24ee31b6ae57'
+    }
+    # response = requests.post(
+    #     'http://192.168.0.103:8000/api/token',
+    #     headers={'Content-Type': 'application/json'},
+    #     data='{"username": "rajib884", "password": "admin"}'
+    # )
+    # print(response.status_code)
+    # print(response.content)
     while 1:
         start = time.ticks_ms()
         bmp180.blocking_read()
@@ -94,18 +109,31 @@ def main():
             t = f"{datetime.datetime_str},{bmp180.temperature:07.4f},{bmp180.pressure:06.0f},{dht11.temperature():02d},{dht11.humidity():02d}\n"
             print(t, end="")
             f.write(t)
+        data = {
+            'date': datetime.datetime_str,
+            'temperature': bmp180.temperature,
+            'humidity': dht11.humidity(),
+            'pressure': bmp180.pressure,
+            'sensor': 5,  # choice([1, 2, 4]),
+            'air_speed': 0,
+            'air_direction': 'N',
+        }
+        response = requests.post('http://192.168.0.103:8000/api/sensors/add', headers=headers, data=json.dumps(data))
+        print(response.status_code)
 
         # lcd.backlight_off()
         # lcd.clear()
         lcd.move_to(0, 0)
         lcd.putstr(f"{chr(0)}{bmp180.temperature:04.1f}{chr(4)}C ")
         lcd.putstr(f"{chr(1)}{bmp180.pressure:06.0f} ")
-        lcd.putstr(f"{chr(2)}{dht11.humidity():02d}%    ")
+        # lcd.putstr(f"{chr(2)}{dht11.humidity():02d}%    ")
+        lcd.putstr(f"{chr(2)}{dht11.humidity():02d}% ")
+        lcd.putstr("OK " if response.status_code == 200 else "XX ")
         # lcd.putstr(f"{chr(3)}NaN")
         lcd.putstr(datetime.time_str)
-        # while time.ticks_diff(time.ticks_ms(), start) < 1900:
-        # time.sleep_ms(10)
-        # lcd.backlight_on()
+        while time.ticks_diff(time.ticks_ms(), start) < 1900:
+        time.sleep_ms(10)
+        lcd.backlight_on()
         while time.ticks_diff(time.ticks_ms(), start) < 2000:
             time.sleep_ms(10)
 
