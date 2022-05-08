@@ -6,27 +6,41 @@ from lcd import lcd
 
 class WiFi:
     def __init__(self):
-        # self.ap_ssid = "ESP8266WifiManager"
-        # self.ap_password = "#rajibul"
-        # self.ap_authmode = 3  # WPA2-PSK
+        self.ap_ssid = "ESP32-AP"
+        self.ap_password = "admin1234"
+        self.ap_authmode = 3  # WPA2-PSK
         self.NETWORK_PROFILES = "wifi.dat"
 
-        # self.server_socket = None
-        # self.wlan_ap = network.WLAN(network.AP_IF)
-        self.wlan_sta = network.WLAN(network.STA_IF)
+        self.wlan_ap = network.WLAN(network.AP_IF)  # hotspot
+        self.wlan_sta = network.WLAN(network.STA_IF)  # wifi
         # self.connected = self.wlan_sta.isconnected()
 
-        self.authmode = {0: "open", 1: "WEP", 2: "WPA-PSK",
-                         3: "WPA2-PSK", 4: "WPA/WPA2-PSK"}
+        self.authmode = {
+            0: "open",
+            1: "WEP",
+            2: "WPA-PSK",
+            3: "WPA2-PSK", 4: "WPA/WPA2-PSK"
+        }
+        self.profiles = {}
+        self.read_profiles()
 
-    def connect(self):
-        lcd.putstr("Connecting Wifi Scanning..", True)
+    def initialize(self):
+        lcd.putstr("Starting Hotspot", True)
+        # Turn on wifi hotspot
+        self.wlan_ap.active(True)
+        self.wlan_ap.config(
+            essid=self.ap_ssid,
+            password=self.ap_password,
+            authmode=self.ap_authmode
+        )
+        lcd.putstr("Hotspot Started", True, 200)
+
+        lcd.putstr("Connecting Wifi", True)
         if self.wlan_sta.isconnected():
-            lcd.putstr("Wifi Connected", True)
-            return True
+            lcd.putstr("Wifi Connected ", True, 200)
+            return
 
         connected = False
-        profiles = self.read_profiles()
         self.wlan_sta.active(True)
         networks = self.wlan_sta.scan()
 
@@ -34,30 +48,43 @@ class WiFi:
             ssid = ssid.decode('utf-8')
             print(f"ssid: {ssid} chan: {channel} rssi: {rssi} authmode: {self.authmode.get(authmode, '?')}")
             lcd.putstr(' ' * 16, x=0, y=1)
-            # lcd.move_to(0, 1)
             lcd.putstr(ssid[:16], x=0, y=1)
             if authmode > 0:
-                if ssid in profiles:
-                    connected = self._connect(ssid=ssid, password=profiles[ssid])
+                if ssid in self.profiles:
+                    connected = self.connect(ssid=ssid, password=self.profiles[ssid])
             else:
-                connected = self._connect(ssid, None)
+                continue
+                # don't connect to open wifi
+                # connected = self._connect(ssid, None)
             if connected is not False:
-                lcd.putstr("Wifi Connected", True)
+                lcd.putstr("Wifi Connected ", wait_ms=200, x=0, y=0)
                 break
         return connected
 
     def read_profiles(self):
-        profiles = {}
-        with open(self.NETWORK_PROFILES) as f:
-            for line in f:
-                ssid, password = line.strip("\n").split(";")
-                profiles[ssid] = password
-        return profiles
+        try:
+            with open(self.NETWORK_PROFILES) as f:
+                for line in f:
+                    ssid, password = line.strip("\n").split(";")
+                    self.profiles[ssid] = password
+        except OSError:
+            pass
 
-    def _connect(self, ssid, password):
+    def write_profiles(self, profiles):
+        raise NotImplementedError
+        lines = []
+        for ssid, password in profiles.items():
+            lines.append("%s;%s\n" % (ssid, password))
+        with open(self.NETWORK_PROFILES, "w") as f:
+            f.write(''.join(lines))
+
+    def connect(self, ssid, password):
         self.wlan_sta.active(True)
         if self.wlan_sta.isconnected():
-            return None
+            if self.wlan_sta.config('essid') == ssid:
+                return True
+            else:
+                self.wlan_sta.disconnect()
 
         print(f'Trying to connect...\nSSID:{ssid}')
         print(f'Password:{password}')
@@ -67,7 +94,7 @@ class WiFi:
             connected = self.wlan_sta.isconnected()
             if connected:
                 break
-            time.sleep(0.1)
+            time.sleep_ms(100)
             print('.', end='')
         if connected:
             print('\nConnected. Network config: ', self.wlan_sta.ifconfig())
@@ -75,31 +102,5 @@ class WiFi:
             print('\nFailed. Not Connected to: ' + ssid)
         return connected
 
-    # def pp(self, port=80):
-    #     if self.connect_from_profile():
-    #         return
-    #
-    #     addr = socket.getaddrinfo('0.0.0.0', port)[0][-1]
-    #     self.stop()
-    #
-    #     self.wlan_sta.active(True)
-    #     self.wlan_ap.active(True)
-    #
-    #     self.wlan_ap.config(
-    #         essid=self.ap_ssid,
-    #         password=self.ap_password,
-    #         authmode=self.ap_authmode
-    #     )
-    #     self.server_socket = socket.socket()
-    #     self.server_socket.bind(addr)
-    #     self.server_socket.listen(1)
-    #
-    #     print(f'Connect to WiFi ssid {self.ap_ssid}, '\
-    #           f'default password: {self.ap_password}\n'\
-    #           'and access the ESP via your favorite web browser at 192.168.4.1.')
-    #     print('Listening on:', addr)
-    #
-    # def stop(self):
-    #     if self.server_socket:
-    #         self.server_socket.close()
-    #         self.server_socket = None
+
+wifi = WiFi()

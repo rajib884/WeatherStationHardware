@@ -15,7 +15,7 @@ class Time:
         self.gmt = 6
         self.update_interval = 3600
         self._last_updated = 0
-        self._update(force=True)
+        # self.update()
 
     def ntp_time(self):
         NTP_QUERY = bytearray(48)
@@ -85,3 +85,9 @@ class Time:
                 return
             except:
                 print("Synchronization Failed")
+
+    def update(self):
+        self._update(True)
+
+
+datetime = Time()

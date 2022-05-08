@@ -14,32 +14,19 @@ except ModuleNotFoundError:
     import requests
 
 import sdcard
-# import wifimgr
-import wifimngr
-from ntime import Time
+from ntime import datetime
 from bmp180 import BMP180
 from lcd import lcd
+from wifimngr import wifi
 import _thread
-
-datetime = None
 
 
 def main():
     lcd.putstr("    IoT Based\nWeather Station!", True, 1000)
-
-    wifi = wifimngr.WiFi()
-    wifi.connect()
-
-    global datetime
-    datetime = Time()
+    wifi.initialize()
+    datetime.update()
     print(f"Time is {datetime.datetime_str}")
     lcd.putstr(f"   {datetime.date_str}       {datetime.time_str}", True, 1000)
-
-    # wlan = wifimgr.get_connection()
-    # if wlan is None:
-    # print("Could not initialize the network connection.")
-
-    # print("WiFi OK")
 
     dht11 = dht.DHT11(machine.Pin(config.dht))
     # lcd.putstr("DHT")
@@ -117,10 +104,9 @@ def main():
 
 
 def xxcd():
-    global datetime
     while 1:
         lcd.putstr(datetime.time_str, x=8, y=1)
-        time.sleep_ms(999)
+        time.sleep_ms(900)
 
 
 if __name__ == '__main__':
