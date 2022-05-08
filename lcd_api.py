@@ -1,6 +1,8 @@
 """Provides an API for talking to HD44780 compatible character LCDs."""
 
 import time
+import _thread
+
 
 class LcdApi:
     """Implements the API for talking with HD44780 compatible character LCDs.
@@ -48,6 +50,7 @@ class LcdApi:
     LCD_RW_READ = 1
 
     def __init__(self, num_lines, num_columns):
+        self.lock = _thread.allocate_lock()
         self.num_lines = num_lines
         if self.num_lines > 4:
             self.num_lines = 4
@@ -154,17 +157,30 @@ class LcdApi:
             self.cursor_y = 0
         self.move_to(self.cursor_x, self.cursor_y)
 
-    def putstr(self, string):
+    def putstr(self, string, clear_first=False, wait_ms=None, x=None, y=None):
         """Write the indicated string to the LCD at the current cursor
         position and advances the cursor position appropriately.
         """
+        self.lock.acquire()
+        if clear_first:
+            self.clear()
+        if x is not None or y is not None:
+            if x is None:
+                x = self.cursor_x
+            if y is None:
+                y = self.cursor_y
+            self.move_to(x, y)
         for char in string:
             self.putchar(char)
+        self.lock.release()
+        if wait_ms is not None:
+            time.sleep_ms(wait_ms)
 
     def custom_char(self, location, charmap):
         """Write a character to one of the 8 CGRAM locations, available
         as chr(0) through chr(7).
         """
+        self.lock.acquire()
         location &= 0x7
         self.hal_write_command(self.LCD_CGRAM | (location << 3))
         self.hal_sleep_us(40)
@@ -172,6 +188,7 @@ class LcdApi:
             self.hal_write_data(charmap[i])
             self.hal_sleep_us(40)
         self.move_to(self.cursor_x, self.cursor_y)
+        self.lock.release()
 
     def hal_backlight_on(self):
         """Allows the hal layer to turn the backlight on.

@@ -1,9 +1,13 @@
+import gc
 import os
 import time
 
 import dht
 import machine
 import json
+
+import config
+
 try:
     import urequests as requests
 except ModuleNotFoundError:
@@ -14,55 +18,22 @@ import sdcard
 import wifimngr
 from ntime import Time
 from bmp180 import BMP180
-from i2c_lcd import I2cLcd
+from lcd import lcd
+import _thread
+
+datetime = None
 
 
 def main():
-    led = machine.Pin(2, machine.Pin.OUT)
-    led.on()
+    lcd.putstr("    IoT Based\nWeather Station!", True, 1000)
 
-    i2c = machine.I2C(scl=machine.Pin(4), sda=machine.Pin(5), freq=100000)
-    i2c_devices = []
-
-    for _ in range(100):
-        i2c_devices = i2c.scan()
-        print(f"Found I2C devices at: {i2c_devices}")
-        if len(i2c_devices) > 1:
-            break
-        led.value(not led.value())
-        time.sleep_ms(200)
-
-    if 0x27 in i2c_devices:
-        print("Found LCD Display")
-    if 0x77 in i2c_devices:
-        print("Found BMP180 Sensor")
-
-    lcd = I2cLcd(i2c, 0x27, 2, 16)
-    lcd_chars = [
-        [0x04, 0x0A, 0x0A, 0x0E, 0x0E, 0x1F, 0x1F, 0x0E],  # thermometer
-        [0x0E, 0x0E, 0x0E, 0x1F, 0x0E, 0x04, 0x01, 0x1E],  # pressure
-        [0x04, 0x0E, 0x0A, 0x11, 0x11, 0x1B, 0x0E, 0x00],  # humidity
-        [0x00, 0x19, 0x0B, 0x04, 0x1A, 0x13, 0x00, 0x00],  # air speed
-        [0x0E, 0x0A, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00],  # degree
-    ]
-    # lcd.clear()
-    for i, c in enumerate(lcd_chars):
-        lcd.custom_char(i, c)
-        # lcd.putchar(chr(i))
-
-    lcd.clear()
-    lcd.putstr("    IoT Based\nWeather Station!")
-
-    time.sleep(3)
     wifi = wifimngr.WiFi()
     wifi.connect()
 
+    global datetime
     datetime = Time()
     print(f"Time is {datetime.datetime_str}")
-    lcd.clear()
-    lcd.putstr(f"   {datetime.date_str}       {datetime.time_str}")
-    time.sleep(1)
-    lcd.clear()
+    lcd.putstr(f"   {datetime.date_str}       {datetime.time_str}", True, 1000)
 
     # wlan = wifimgr.get_connection()
     # if wlan is None:
@@ -70,25 +41,22 @@ def main():
 
     # print("WiFi OK")
 
-    lcd.putstr("BMP180..")
-    bmp180 = BMP180(i2c)
-    bmp180.oversample_sett = 3
-    lcd.move_to(0, 0)
-    lcd.putstr("BMP180 Initiated")
-
-    dht11 = dht.DHT11(machine.Pin(2))
+    dht11 = dht.DHT11(machine.Pin(config.dht))
     # lcd.putstr("DHT")
 
-    lcd.move_to(0, 1)
-    lcd.putstr("SD Card..")
-    sd = sdcard.SDCard(machine.SPI(1), machine.Pin(15))
-    os.mount(sd, '/sd')
-    print("Mounted SD Card")
-    lcd.move_to(0, 1)
-    lcd.putstr("SD Card Mounted")
+    lcd.putstr("BMP180..", True)
+    bmp180 = BMP180(config.i2c)
+    bmp180.oversample_sett = 3
+    lcd.putstr("BMP180 Initiated", True)
 
-    time.sleep_ms(500)
-    lcd.clear()
+    # lcd.move_to(0, 1)
+    lcd.putstr("SD Card..", x=0, y=1)
+    sd = sdcard.SDCard(machine.SPI(config.spi), machine.Pin(config.cs))
+    os.mount(sd, '/sd')
+    # lcd.move_to(0, 1)
+    lcd.putstr("SD Card Mounted", False, 500, x=0, y=1)
+    print("SD Card Mounted")
+    # lcd.clear()
 
     headers = {
         'Content-Type': 'application/json',
@@ -101,6 +69,8 @@ def main():
     # )
     # print(response.status_code)
     # print(response.content)
+    lcd.putstr("", True)
+    _thread.start_new_thread(xxcd, ())
     while 1:
         start = time.ticks_ms()
         bmp180.blocking_read()
@@ -112,30 +82,45 @@ def main():
         data = {
             'date': datetime.datetime_str,
             'temperature': bmp180.temperature,
-            'humidity': dht11.humidity(),
-            'pressure': bmp180.pressure,
+            'humidity': round(dht11.humidity(), 0),
+            'pressure': round(bmp180.pressure, 0),
             'sensor': 5,  # choice([1, 2, 4]),
-            'air_speed': 0,
+            'air_speed': 0.0,
             'air_direction': 'N',
         }
-        response = requests.post('http://192.168.0.103:8000/api/sensors/add', headers=headers, data=json.dumps(data))
-        print(response.status_code)
+        sent = False
+        try:
+            response = requests.post('http://192.168.0.103:8000/api/sensors/add', headers=headers,
+                                     data=json.dumps(data))
+            print(response.status_code)
+            print(response.content.decode())
+            sent = response.status_code == 200
+        except OSError:
+            pass
 
-        # lcd.backlight_off()
         # lcd.clear()
-        lcd.move_to(0, 0)
-        lcd.putstr(f"{chr(0)}{bmp180.temperature:04.1f}{chr(4)}C ")
-        lcd.putstr(f"{chr(1)}{bmp180.pressure:06.0f} ")
+        # lcd.move_to(0, 0)
+        lcd.putstr(f"{chr(0)}{bmp180.temperature:04.1f}{chr(4)}C {chr(1)}{bmp180.pressure:06.0f} {chr(2)}{dht11.humidity():02d}% {'OK ' if sent else 'XX '}", x=0, y=0)
+        # lcd.putstr(f"")
         # lcd.putstr(f"{chr(2)}{dht11.humidity():02d}%    ")
-        lcd.putstr(f"{chr(2)}{dht11.humidity():02d}% ")
-        lcd.putstr("OK " if response.status_code == 200 else "XX ")
+        # lcd.putstr(f"")
+        # lcd.putstr()
         # lcd.putstr(f"{chr(3)}NaN")
-        lcd.putstr(datetime.time_str)
-        while time.ticks_diff(time.ticks_ms(), start) < 1900:
-        time.sleep_ms(10)
-        lcd.backlight_on()
+        gc.collect()
+        print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
+        # while time.ticks_diff(time.ticks_ms(), start) < 1900:
+        #     time.sleep_ms(10)
+        # lcd.backlight_off()
         while time.ticks_diff(time.ticks_ms(), start) < 2000:
             time.sleep_ms(10)
+        # lcd.backlight_on()
+
+
+def xxcd():
+    global datetime
+    while 1:
+        lcd.putstr(datetime.time_str, x=8, y=1)
+        time.sleep_ms(999)
 
 
 if __name__ == '__main__':

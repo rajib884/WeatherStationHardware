@@ -1,6 +1,7 @@
 # import socket
 import time
 import network
+from lcd import lcd
 
 
 class WiFi:
@@ -19,7 +20,9 @@ class WiFi:
                          3: "WPA2-PSK", 4: "WPA/WPA2-PSK"}
 
     def connect(self):
+        lcd.putstr("Connecting Wifi Scanning..", True)
         if self.wlan_sta.isconnected():
+            lcd.putstr("Wifi Connected", True)
             return True
 
         connected = False
@@ -30,13 +33,16 @@ class WiFi:
         for ssid, bssid, channel, rssi, authmode, hidden in sorted(networks, key=lambda x: x[3], reverse=True):
             ssid = ssid.decode('utf-8')
             print(f"ssid: {ssid} chan: {channel} rssi: {rssi} authmode: {self.authmode.get(authmode, '?')}")
+            lcd.putstr(' ' * 16, x=0, y=1)
+            # lcd.move_to(0, 1)
+            lcd.putstr(ssid[:16], x=0, y=1)
             if authmode > 0:
                 if ssid in profiles:
-                    password = profiles[ssid]
-                    connected = self._connect(ssid, password)
+                    connected = self._connect(ssid=ssid, password=profiles[ssid])
             else:
                 connected = self._connect(ssid, None)
-            if connected:
+            if connected is not False:
+                lcd.putstr("Wifi Connected", True)
                 break
         return connected
 
