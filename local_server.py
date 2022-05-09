@@ -49,7 +49,7 @@ def get_server(request):
     return Response(config.web_server, 200)
 
 
-@server.post('/<string:method>/<string:target>')
+@server.post('/<re:get|set|check:method>/<re:.+:target>')
 def methods(request, method, target):
     print(f"Method is {method}")
     print(f"target is {target}")
