@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weather Station</title>
+    <link rel="icon" href="favicon.png" type="image/x-icon" />
+    <!-- <link rel="stylesheet" href="bootstrap.min.css" /> -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+    <!-- <script src="bootstrap.bundle.min.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+        crossorigin="anonymous"></script>
+    <!-- <script src="jquery-3.6.0.min.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+</head>
+
+<body style="background-color: darkslategray">
+    <div id="loading-spinner" style="background-color: #0000004d; backdrop-filter: blur(2px)">
+        <div class="d-flex position-absolute top-50 start-50 translate-middle"
+            style="background-color: rgba(255, 255, 255, 0.82); padding: 100px">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+    <div class="container pt-1 col-md-7 col-lg-5">
+        <h1 class="text-white text-center">Settings</h1>
+        <div class="accordion" id="accordionExample">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseOne">
+                        Server Settings
+                    </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#accordionExample">
+                    <div class="accordion-body">
+                        <label class="form-label">Server Address</label>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control" id="web_server" oninput="$(this).next().hide();" placeholder="http://192.168.0.100:8000" />
+                            <span class="input-group-text" style="font-size: 1.5rem; padding: 0.375rem; display: none;"></span>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <button id="get-web_server" class="btn btn-primary" onclick="f1($(this))">
+                                <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
+                                Get
+                            </button>
+                            <button id="check-web_server" class="btn btn-primary" onclick="f1($(this))">
+                                <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
+                                Check
+                            </button>
+                            <button id="set-web_server" class="btn btn-primary" onclick="f1($(this))">
+                                <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
+                                Save
+                            </button>
+                        </div>
+
+                        <label class="form-label">Token</label>
+                        <div class="input-group mb-2">
+                            <input type="password" class="form-control" id="web-token" oninput="$(this).next().hide();" placeholder="Server Token" />
+                            <span class="input-group-text" style="font-size: 1.5rem; padding: 0.375rem; display: none;"></span>
+                            <button class="input-group-text btn btn-primary" id="show-web-token">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <button id="get-web-token" class="btn btn-primary" onclick="f1($(this))">
+                                <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
+                                Get
+                            </button>
+                            <button id="check-web-token" class="btn btn-primary" onclick="f1($(this))">
+                                <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
+                                Check
+                            </button>
+                            <button id="set-web-token" class="btn btn-primary" onclick="f1($(this))">
+                                <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
+                                Save
+                            </button>
+                        </div>
+
+                        <label class="form-label">Device ID</label>
+                        <div class="input-group mb-2">
+                            <input type="number" class="form-control" id="device-id" oninput="$(this).next().hide();" placeholder="Sensor Number" />
+                            <span class="input-group-text" style="font-size: 1.5rem; padding: 0.375rem; display: none;"></span>
+                        </div>
+                        <div class="col-12">
+                            <button id="get-device-id" class="btn btn-primary" onclick="f1($(this))">
+                                <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
+                                Get
+                            </button>
+                            <button id="check-device-id" class="btn btn-primary" onclick="f1($(this))">
+                                <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
+                                Check
+                            </button>
+                            <button id="set-device-id" class="btn btn-primary" onclick="f1($(this))">
+                                <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseTwo">
+                        Wifi Settings
+                    </button>
+                </h2>
+                <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                    <div class="accordion-body row g-2">
+                        <span class="h4">Hotspot</span>
+                        <div class="input-group mt-1">
+                            <label class="input-group-text">Status</label>
+                            <select class="form-select" id="hotspot-status">
+                                <option value="1">Enabled</option>
+                                <option value="2">Disabled</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-group-text"><i class="fa-solid fa-pencil"></i></label>
+                            <input class="form-control" type="text" placeholder="SSID" />
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-group-text"><i class="fa-solid fa-key"></i></label>
+                            <input id="hotspot-pass" class="form-control" type="password" placeholder="Set Password" />
+                            <button class="input-group-text btn btn-primary" id="show-hotspot-pass">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-primary">Get</button>
+                            <button class="btn btn-primary">Save</button>
+                        </div>
+
+                        <span class="h4 pt-3">WiFi</span>
+                        <div class="input-group mt-1">
+                            <label class="input-group-text">Status</label>
+                            <select class="form-select" id="wifi-status">
+                                <option value="1">Enabled</option>
+                                <option value="2">Disabled</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-group-text"><i class="fa-solid fa-wifi"></i></label>
+                            <select class="form-select" id="wifi-ssid">
+                                <option selected>Select Wifi..</option>
+                                <option value="1">
+                                    To Study.<span><i class="fa-solid fa-wifi"></i></span>
+                                </option>
+                                <option value="2">RUET_Teachers</option>
+                                <option value="3">RUET_Employee</option>
+                                <option value="4">RUET_Students</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-group-text text-center"><span
+                                    style="padding-left: 2px; padding-right: 2px">
+                                    <i class="fa-solid fa-key"></i></span></label>
+                            <input id="wifi-pass" class="form-control" type="password" placeholder="Wifi Password" />
+                            <button class="input-group-text btn btn-primary" id="show-wifi-pass">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-primary">Scan</button>
+                            <button class="btn btn-primary">Connect</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseThree">
+                        Device Settings
+                    </button>
+                </h2>
+                <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                    <div class="accordion-body">
+                        <button class="btn btn-primary">Reboot Device</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <style>
+        #loading-spinner {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            position: absolute;
+            left: 0;
+            z-index: 999;
+        }
+    </style>
+    <script>
+        function f1(el) {
+            id = el.attr('id')
+            method = id.split('-')[0]
+            target = '#' + id.split('-').splice(1).join('-')
+            url = method + '/' + target.substr(1).replaceAll('-', '_')
+
+            console.log(url)
+            console.log(target)
+            console.log(JSON.stringify($(target).val()))
+
+            if (el.children('span').is(':visible')) {
+                console.log("Wait..");
+                return;
+            }
+            el.children('span').show()
+            $.ajax({
+                url: url,
+                data: JSON.stringify($(target).val()),
+                contentType: "application/json",
+                type: "POST",
+                success: function (data) {
+                    console.log(data);
+                    method = id.split('-')[0]
+                    if (method == 'check') {
+                        console.log("Checked", data)
+                        if (data == "True") {
+                            $(target).next().html('<i class="fa-solid fa-circle-check"></i>');
+                        } else {
+                            $(target).next().html('<i class="fa-solid fa-circle-xmark"></i>');
+                        }
+                        $(target).next().show();
+                        
+                    } else if (method == 'get') {
+                        $(target).val(data);
+                        console.log("got", data)
+                    } else if (method == 'set') {
+                        console.log("saved", data)
+                    }
+                    el.children('span').hide();
+                },
+            }).fail(function (response, y, reason) {
+                //console.log(response);
+                el.children('span').hide();
+            });
+        }
+
+        $("#show-web-token").click(function () {
+            if ($("#web-token").attr("type") == "password") {
+                $("#web-token").attr("type", "text");
+                $("#show-web-token").html("<i class='fa-solid fa-eye'></i>");
+            } else {
+                $("#web-token").attr("type", "password");
+                $("#show-web-token").html("<i class='fa-solid fa-eye-slash'></i>");
+            }
+        });
+
+        $("#show-wifi-pass").click(function () {
+            if ($("#wifi-pass").attr("type") == "password") {
+                $("#wifi-pass").attr("type", "text");
+                $("#show-wifi-pass").html("<i class='fa-solid fa-eye'></i>");
+            } else {
+                $("#wifi-pass").attr("type", "password");
+                $("#show-wifi-pass").html("<i class='fa-solid fa-eye-slash'></i>");
+            }
+        });
+
+        $("#show-hotspot-pass").click(function () {
+            if ($("#hotspot-pass").attr("type") == "password") {
+                $("#hotspot-pass").attr("type", "text");
+                $("#show-hotspot-pass").html("<i class='fa-solid fa-eye'></i>");
+            } else {
+                $("#hotspot-pass").attr("type", "password");
+                $("#show-hotspot-pass").html("<i class='fa-solid fa-eye-slash'></i>");
+            }
+        });
+
+        $("#loading-spinner").hide();
+    </script>
+</body>
+
+</html>
