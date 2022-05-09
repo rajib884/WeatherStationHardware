@@ -1,4 +1,3 @@
-# import socket
 import time
 import network
 from lcd import lcd
@@ -33,7 +32,7 @@ class WiFi:
             password=self.ap_password,
             authmode=self.ap_authmode
         )
-        lcd.putstr("Hotspot Started", True, 200)
+        lcd.putstr("Hotspot Started", wait_ms=200, x=0, y=1)
 
         lcd.putstr("Connecting Wifi", True)
         if self.wlan_sta.isconnected():
@@ -70,10 +69,13 @@ class WiFi:
         except OSError:
             pass
 
-    def write_profiles(self, profiles):
-        raise NotImplementedError
-        lines = []
+    def write_profiles(self, profiles=None):
+        if profiles is None:
+            profiles = {}
         for ssid, password in profiles.items():
+            self.profiles[ssid] = password
+        lines = []
+        for ssid, password in self.profiles.items():
             lines.append("%s;%s\n" % (ssid, password))
         with open(self.NETWORK_PROFILES, "w") as f:
             f.write(''.join(lines))
@@ -87,7 +89,7 @@ class WiFi:
                 self.wlan_sta.disconnect()
 
         print(f'Trying to connect...\nSSID:{ssid}')
-        print(f'Password:{password}')
+        print(f'Password:{password[:3]}{"*" * (len(password) - 3)}')
         connected = False
         self.wlan_sta.connect(ssid, password)
         for retry in range(100):
@@ -98,6 +100,7 @@ class WiFi:
             print('.', end='')
         if connected:
             print('\nConnected. Network config: ', self.wlan_sta.ifconfig())
+            self.write_profiles({ssid: password})
         else:
             print('\nFailed. Not Connected to: ' + ssid)
         return connected
