@@ -1,12 +1,13 @@
 import gc
 import os
+import sys
 import time
 
 import dht
 import machine
 import json
 
-import config
+from config import config
 
 try:
     import urequests as requests
@@ -19,11 +20,29 @@ from bmp180 import BMP180
 from lcd import lcd
 from wifimngr import wifi
 import _thread
+from local_server import server
+
+p12 = machine.Pin(12, machine.Pin.OUT)
+p13 = machine.Pin(13, machine.Pin.IN)
+p12.value(1)
+# if p13.value():
+#     print("\n\nPin 13 is not low, exiting..\n\n")
+#     sys.exit()
 
 
 def main():
     lcd.putstr("    IoT Based\nWeather Station!", True, 1000)
     wifi.initialize()
+    lcd.putstr("Starting Server", True)
+    _thread.start_new_thread(server.run, ())
+    lcd.putstr("Server Started", True)
+    if wifi.wlan_sta.isconnected():
+        lcd.putstr(wifi.wlan_sta.ifconfig()[0], wait_ms=1000, x=0, y=1)
+    elif wifi.wlan_ap.active():
+        lcd.putstr(wifi.wlan_ap.ifconfig()[0], wait_ms=1000, x=0, y=1)
+    if p13.value():
+        print("\n\nPin 13 is not low, exiting..\n\n")
+        sys.exit()
     datetime.update()
     print(f"Time is {datetime.datetime_str}")
     lcd.putstr(f"   {datetime.date_str}       {datetime.time_str}", True, 1000)
@@ -98,7 +117,7 @@ def main():
         # while time.ticks_diff(time.ticks_ms(), start) < 1900:
         #     time.sleep_ms(10)
         # lcd.backlight_off()
-        while time.ticks_diff(time.ticks_ms(), start) < 2000:
+        while time.ticks_diff(time.ticks_ms(), start) < 5000:
             time.sleep_ms(10)
         # lcd.backlight_on()
 
