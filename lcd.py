@@ -50,4 +50,13 @@ def wait_for_lcd():
 
 
 lcd = wait_for_lcd()
+# lcd = GpioLcd(
+#     rs_pin=machine.Pin(33),
+#     enable_pin=machine.Pin(25),
+#     d4_pin=machine.Pin(26),
+#     d5_pin=machine.Pin(27),
+#     d6_pin=machine.Pin(14),
+#     d7_pin=machine.Pin(13),
+#     num_lines=2, num_columns=16
+# )
 _thread.start_new_thread(add_lcd_chars, ())
