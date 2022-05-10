@@ -1,12 +1,11 @@
 import time
 import network
 from lcd import lcd
+from config import config
 
 
 class WiFi:
     def __init__(self):
-        self.ap_ssid = "ESP32-AP"
-        self.ap_password = "admin1234"
         self.ap_authmode = 3  # WPA2-PSK
         self.NETWORK_PROFILES = "wifi.dat"
 
@@ -18,7 +17,8 @@ class WiFi:
             0: "open",
             1: "WEP",
             2: "WPA-PSK",
-            3: "WPA2-PSK", 4: "WPA/WPA2-PSK"
+            3: "WPA2-PSK",
+            4: "WPA/WPA2-PSK"
         }
         self.profiles = {}
         self.read_profiles()
@@ -26,12 +26,7 @@ class WiFi:
     def initialize(self):
         lcd.putstr("Starting Hotspot", True)
         # Turn on wifi hotspot
-        self.wlan_ap.active(True)
-        self.wlan_ap.config(
-            essid=self.ap_ssid,
-            password=self.ap_password,
-            authmode=self.ap_authmode
-        )
+        self.hotspot(True)
         lcd.putstr("Hotspot Started", wait_ms=200, x=0, y=1)
 
         lcd.putstr("Connecting Wifi", True)
@@ -104,6 +99,15 @@ class WiFi:
         else:
             print('\nFailed. Not Connected to: ' + ssid)
         return connected
+
+    def hotspot(self, target=True):
+        self.wlan_ap.active(target)
+        if target:
+            self.wlan_ap.config(
+                essid=config.ap_ssid,
+                password=config.ap_password,
+                authmode=self.ap_authmode
+            )
 
 
 wifi = WiFi()
