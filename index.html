@@ -42,15 +42,15 @@
                             <span class="input-group-text" style="font-size: 1.5rem; padding: 0.375rem; display: none;"></span>
                         </div>
                         <div class="col-12 mb-3">
-                            <button id="get-web-server" class="btn btn-primary" onclick="f1(this.id)">
+                            <button id="get-web-server" class="btn btn-primary col-3" onclick="f1(this.id)">
                                 <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
                                 Get
                             </button>
-                            <button id="check-web-server" class="btn btn-primary" onclick="f1(this.id)">
+                            <button id="check-web-server" class="btn btn-primary col-3" onclick="f1(this.id)">
                                 <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
                                 Check
                             </button>
-                            <button id="set-web-server" class="btn btn-primary" onclick="f1(this.id)">
+                            <button id="set-web-server" class="btn btn-primary col-3" onclick="f1(this.id)">
                                 <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
                                 Save
                             </button>
@@ -65,15 +65,15 @@
                             </button>
                         </div>
                         <div class="col-12 mb-3">
-                            <button id="get-web-token" class="btn btn-primary" onclick="f1(this.id)">
+                            <button id="get-web-token" class="btn btn-primary col-3" onclick="f1(this.id)">
                                 <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
                                 Get
                             </button>
-                            <button id="check-web-token" class="btn btn-primary" onclick="f1(this.id)">
+                            <button id="check-web-token" class="btn btn-primary col-3" onclick="f1(this.id)">
                                 <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
                                 Check
                             </button>
-                            <button id="set-web-token" class="btn btn-primary" onclick="f1(this.id)">
+                            <button id="set-web-token" class="btn btn-primary col-3" onclick="f1(this.id)">
                                 <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
                                 Save
                             </button>
@@ -85,15 +85,15 @@
                             <span class="input-group-text" style="font-size: 1.5rem; padding: 0.375rem; display: none;"></span>
                         </div>
                         <div class="col-12">
-                            <button id="get-device-id" class="btn btn-primary" onclick="f1(this.id)">
+                            <button id="get-device-id" class="btn btn-primary col-3" onclick="f1(this.id)">
                                 <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
                                 Get
                             </button>
-                            <button id="check-device-id" class="btn btn-primary" onclick="f1(this.id)">
+                            <button id="check-device-id" class="btn btn-primary col-3" onclick="f1(this.id)">
                                 <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
                                 Check
                             </button>
-                            <button id="set-device-id" class="btn btn-primary" onclick="f1(this.id)">
+                            <button id="set-device-id" class="btn btn-primary col-3" onclick="f1(this.id)">
                                 <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
                                 Save
                             </button>
@@ -131,11 +131,11 @@
                             </button>
                         </div>
                         <div class="col-12">
-                            <button id="get_ap" class="btn btn-primary">
+                            <button id="get_ap" class="btn btn-primary col-3">
                                 <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
                                 Get
                             </button>
-                            <button id="set_ap" class="btn btn-primary">
+                            <button id="set_ap" class="btn btn-primary col-3">
                                 <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
                                 Save
                             </button>
@@ -165,11 +165,11 @@
                             </button>
                         </div>
                         <div class="col-12">
-                            <button id="get_sta" class="btn btn-primary">
+                            <button id="get_sta" class="btn btn-primary col-3">
                                 <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
                                 Scan
                             </button>
-                            <button id="set_sta" class="btn btn-primary">
+                            <button id="set_sta" class="btn btn-primary col-3">
                                 <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
                                 Connect</button>
                         </div>
@@ -184,7 +184,48 @@
                     </button>
                 </h2>
                 <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
-                    <div class="accordion-body">
+                    <div class="accordion-body row g-2">
+                        <span class="h4">zX</span>
+                        <div class="input-group mt-1">
+                            <label class="input-group-text col-4">CPU Frequency</label>
+                            <select class="form-select">
+                                <option selected>240 Mhz</option>
+                                <option selected>160 Mhz</option>
+                                <option selected>80 Mhz</option>
+                                <option selected>40 Mhz</option>
+                            </select>
+                            <button class="input-group-text btn btn-primary">
+                                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                            </button>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-group-text col-4">Reading delay (ms)</label>
+                            <input class="form-control" type="number">
+                            <button class="input-group-text btn btn-primary">
+                                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                            </button>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-group-text col-4">Sending delay (ms)</label>
+                            <input class="form-control">
+                            <!-- <button class="btn btn-primary input-group-text">Apply</button> -->
+                            <button class="input-group-text btn btn-primary">
+                                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                            </button>
+                        </div>
+                        <div class="input-group">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault">
+                                <label class="form-check-label" for="flexSwitchCheckDefault">Disconnecct after sending data</label>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault1">
+                                <label class="form-check-label" for="flexSwitchCheckDefault1">Sleep inbetween reading</label>
+                            </div>
+                        </div>
                         <button class="btn btn-primary">Reboot Device</button>
                     </div>
                 </div>

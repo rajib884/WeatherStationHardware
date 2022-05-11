@@ -128,8 +128,9 @@ def get_sta(request):
 @server.route('toggle/<string:target>')
 def toggle(request, target):
     if target == 'hotspot':
-        wifi.hotspot(not wifi.wlan_ap.active())
-        return {'ap_active': "Enabled" if wifi.wlan_ap.active() else "Disabled"}
+        config.set('ap_enable', not wifi.wlan_ap.active())
+        wifi.hotspot(config.ap_enable)
+        return {'ap_active': "Enabled" if config.ap_enable else "Disabled"}
     elif target == 'wifi':
         wifi.wlan_sta.active(not wifi.wlan_sta.active())
         return {'sta_active': "Enabled" if wifi.wlan_sta.active() else "Disabled"}
