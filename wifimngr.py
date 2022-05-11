@@ -55,6 +55,23 @@ class WiFi:
                 break
         return connected
 
+    def scan(self):
+        networks = self.wlan_sta.scan()
+        r = []
+        for ssid, bssid, channel, rssi, authmode, hidden in sorted(networks, key=lambda x: x[3], reverse=True):
+            ssid = ssid.decode('utf-8')
+            bssid = ".".join(list(str(hex(y))[2:] for y in bssid))
+            authmode = self.authmode.get(authmode, '?')
+            r.append({
+                'ssid': ssid,
+                'bssid': bssid,
+                'channel': channel,
+                'rssi': rssi,
+                'authmode': authmode,
+                'hidden': hidden,
+            })
+        return r
+
     def read_profiles(self):
         try:
             with open(self.NETWORK_PROFILES) as f:

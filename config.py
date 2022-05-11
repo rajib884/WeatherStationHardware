@@ -20,7 +20,10 @@ class Config:
             "web_server": "http://192.168.0.103:8000",
             "web_token": "966259f9553c20f6620737dc334b24ee31b6ae57",
             "device_id": 5,
-            "delay_reading": 5000
+            "delay_reading": 5000,
+
+            "ap_ssid": "ESP32-AP",
+            "ap_password": "admin1234"
         }
         # TODO: remove this line
         self.write_config()

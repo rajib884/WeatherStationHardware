@@ -3,7 +3,7 @@ import _thread
 import machine
 import time
 
-import config
+from config import config
 from i2c_lcd import I2cLcd
 
 

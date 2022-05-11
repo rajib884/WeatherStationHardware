@@ -13,7 +13,9 @@ import re
 import socket
 import _thread
 
-concurrency_mode = 'threaded'  # 'sync' or 'threaded'
+from config import config
+
+concurrency_mode = 'threaded' if config.multithreaded_server else 'sync'
 if concurrency_mode == 'threaded':
     def create_thread(f, *args, **kwargs):
         # use MicroPython's _thread module
@@ -436,7 +438,7 @@ class Response():
         return cls(status_code=status_code, headers={'Location': location})
 
     @classmethod
-    def send_file(cls, filename, status_code=200, content_type=None):
+    def send_file(cls, filename, status_code=200, content_type=None, headers=None):
         # """Send file contents in a response.
         #
         # :param filename: The filename of the file.
@@ -450,6 +452,8 @@ class Response():
         # filenames provided by the user before validating and sanitizing them
         # first.
         # """
+        if headers is None:
+            headers = {}
         if content_type is None:
             ext = filename.split('.')[-1]
             if ext in Response.types_map:
@@ -457,8 +461,8 @@ class Response():
             else:
                 content_type = 'application/octet-stream'
         f = open(filename, 'rb')
-        return cls(body=f, status_code=status_code,
-                   headers={'Content-Type': content_type})
+        headers['Content-Type'] = content_type
+        return cls(body=f, status_code=status_code, headers=headers)
 
 
 class URLPattern():
@@ -717,7 +721,7 @@ class Microdot():
             return f
         return decorated
 
-    def run(self, host='0.0.0.0', port=5000, debug=False):
+    def run(self, host='0.0.0.0', port=5000, debug=True):
         # """Start the web server. This function does not normally return, as
         # the server enters an endless listening loop. The :func:`shutdown`
         # function provides a method for terminating the server gracefully.

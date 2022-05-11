@@ -10,49 +10,21 @@ server = Microdot()
 
 @server.route('/')
 def index(request):
-    f = open('/static/index.html')
-    return Response(f, 200, {'Content-Type': 'text/html'})
+    return Response.send_file('index.html')
 
 
-@server.route('/bootstrap.bundle.min.js')
-def index(request):
-    f = open('/static/bootstrap.bundle.min.js')
-    return Response(f, 200, {'Content-Type': 'text/javascript', 'Cache-Control': 'public, max-age=31536000'})
+@server.route('static/<string:file>')
+def static_file(request, file):
+    return Response.send_file(f'/static/{file}', headers={'Cache-Control': 'public, max-age=31536000'})
 
 
-@server.route('/jquery-3.6.0.min.js')
-def index(request):
-    f = open('/static/jquery-3.6.0.min.js')
-    return Response(f, 200, {'Content-Type': 'text/javascript', 'Cache-Control': 'public, max-age=31536000'})
-
-
-@server.route('/bootstrap.min.css')
-def index(request):
-    f = open('/static/bootstrap.min.css')
-    return Response(f, 200, {'Content-Type': 'text/css', 'Cache-Control': 'public, max-age=31536000'})
-
-
-@server.route('/favicon.png')
-def index(request):
-    f = open('/static/favicon.png')
-    return Response(f, 200, {'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=31536000'})
-
-
-@server.post('/set_server_address')
-def set_server(request):
-    config.set("web_server", request.json)
-    return Response("Success", 200)
-
-
-@server.post('/get_server_address')
-def get_server(request):
-    return Response(config.web_server, 200)
+@server.route('webfonts/fa-solid-900.woff2')
+def webfonts(request):
+    return Response.send_file('webfonts/fa-solid-900.woff2', headers={'Cache-Control': 'public, max-age=31536000'})
 
 
 @server.post('/<re:get|set|check:method>/<re:.+:target>')
 def methods(request, method, target):
-    print(f"Method is {method}")
-    print(f"target is {target}")
     if method == "get":
         return Response(str(config.get(target)), 200)
     elif method == "set":
@@ -88,13 +60,81 @@ def methods(request, method, target):
     return Response("Error: Unknown method", 404)
 
 
-@server.route('/scan_wifi')
-def scan_wifi(request):
-    return wifi.wlan_sta.scan()
-    # return Response(
-    #     body=open("index.html"),
-    #     headers={'Content-Type': 'text/html'}
-    # )
+@server.route('/get_ap')
+def get_ap(request):
+    return {
+        'ap_active': "Enabled" if wifi.wlan_ap.active() else "Disabled",
+        'ap_ssid': config.ap_ssid,
+        'ap_password': config.ap_password,
+    }
+
+
+@server.post('/set_ap')
+def set_ap(request):
+    if "ap_ssid" in request.json:
+        ssid = request.json["ap_ssid"]
+    else:
+        return {'error': 'SSID not provided'}, 404
+    if "ap_password" in request.json:
+        password = request.json["ap_password"]
+        if len(password) < 8:
+            return {'error': 'Invalid Password'}, 404
+    else:
+        return {'error': 'Password not provided'}, 404
+    config.set('ap_ssid', ssid)
+    config.set('ap_password', password)
+    wifi.hotspot(wifi.wlan_ap.active())
+    return {
+        'ap_active': "Enabled" if wifi.wlan_ap.active() else "Disabled",
+        'ap_ssid': config.ap_ssid,
+        'ap_password': config.ap_password,
+    }
+
+
+@server.post('/set_sta')
+def set_sta(request):
+    if "sta_ssid" in request.json:
+        ssid = request.json["sta_ssid"]
+    else:
+        return {'error': 'SSID not provided'}, 404
+    if "sta_password" in request.json:
+        password = request.json["sta_password"]
+    else:
+        password = None
+    if password == "":
+        password = None
+    if password is None:
+        if ssid in wifi.profiles:
+            password = wifi.profiles[ssid]
+    wifi.connect(ssid, password)
+    return {
+        'sta_active': "Enabled" if wifi.wlan_sta.active() else "Disabled",
+        'sta_connected': str(wifi.wlan_sta.isconnected()),
+        'sta_connected_to': wifi.wlan_sta.config('essid') if wifi.wlan_sta.isconnected() else "",
+        'sta_networks': wifi.scan(),
+    }
+
+
+@server.route('/get_sta')
+def get_sta(request):
+    return {
+        'sta_active': "Enabled" if wifi.wlan_sta.active() else "Disabled",
+        'sta_connected': str(wifi.wlan_sta.isconnected()),
+        'sta_connected_to': wifi.wlan_sta.config('essid') if wifi.wlan_sta.isconnected() else "",
+        'sta_networks': wifi.scan(),
+    }
+
+
+@server.route('toggle/<string:target>')
+def toggle(request, target):
+    if target == 'hotspot':
+        wifi.hotspot(not wifi.wlan_ap.active())
+        return {'ap_active': "Enabled" if wifi.wlan_ap.active() else "Disabled"}
+    elif target == 'wifi':
+        wifi.wlan_sta.active(not wifi.wlan_sta.active())
+        return {'sta_active': "Enabled" if wifi.wlan_sta.active() else "Disabled"}
+    else:
+        return {'error': 'unknown target'}, 404
 
 
 @server.before_request

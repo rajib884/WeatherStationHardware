@@ -66,7 +66,7 @@ def main():
 
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': 'Token 966259f9553c20f6620737dc334b24ee31b6ae57'
+        'Authorization': f'Token {config.web_token}'
     }
     # response = requests.post(
     #     'http://192.168.0.103:8000/api/token',
@@ -115,10 +115,10 @@ def main():
         gc.collect()
         print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
         # while time.ticks_diff(time.ticks_ms(), start) < 1900:
-        #     time.sleep_ms(10)
+        #     time.sleep_ms(100)
         # lcd.backlight_off()
-        while time.ticks_diff(time.ticks_ms(), start) < 5000:
-            time.sleep_ms(10)
+        while time.ticks_diff(time.ticks_ms(), start) < config.delay_reading:
+            time.sleep_ms(100)
         # lcd.backlight_on()
 
 

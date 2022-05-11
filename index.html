@@ -152,13 +152,7 @@
                         <div class="input-group">
                             <label class="input-group-text"><i class="fa-solid fa-wifi"></i></label>
                             <select class="form-select" id="wifi-ssid">
-                                <option selected>Select Wifi..</option>
-                                <option value="1">
-                                    To Study.<span><i class="fa-solid fa-wifi"></i></span>
-                                </option>
-                                <option value="2">RUET_Teachers</option>
-                                <option value="3">RUET_Employee</option>
-                                <option value="4">RUET_Students</option>
+                                <option selected>Scan Wifi..</option>
                             </select>
                         </div>
                         <div class="input-group">
@@ -175,7 +169,9 @@
                                 <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
                                 Scan
                             </button>
-                            <button class="btn btn-primary">Connect</button>
+                            <button id="set_sta" class="btn btn-primary">
+                                <span class="spinner-border spinner-border-sm" role="status" style="display: none"></span>
+                                Connect</button>
                         </div>
                     </div>
                 </div>
@@ -287,12 +283,12 @@
                     if ("ap_active" in data) $("#hotspot-status").text(data["ap_active"].toString())
                     if ("ap_ssid" in data) $("#ap-ssid").val(data["ap_ssid"].toString())
                     if ("ap_password" in data) $("#ap-password").val(data["ap_password"].toString())
-                    $('#set_ap').children('span').show();
+                    $('#set_ap').children('span').hide();
                 },
                 dataType: 'json'
             }).fail(function(r,y,v){
                 console.log("failed");
-                $('#set_ap').children('span').show();
+                $('#set_ap').children('span').hide();
             });
         });
 
@@ -306,10 +302,10 @@
                     
                     html = '<option>Select Wifi..</option>'
                     $.each(data["sta_networks"], function(i, wifi){
-                        html += '<option value="' + i + '"'
-                        if (data["sta_connected_to"] == wifi[0])
+                        html += '<option value="' + wifi['ssid'] + '"'
+                        if (data["sta_connected_to"] == wifi['ssid'])
                             html += ' selected'
-                        html += '>'+wifi[0]+'</option>'
+                        html += '>'+wifi['ssid']+'</option>'
                     })
                     console.log(html)
                     $("#wifi-ssid").html(html)
@@ -325,6 +321,38 @@
             });
         });
         
+        $("#set_sta").click(function(){
+            $('#set_sta').children('span').show();
+            $.ajax({
+                type: 'POST',
+                url: 'set_sta',
+                contentType: "application/json",
+                data: JSON.stringify({
+                    'sta_ssid': $('#wifi-ssid').val(),
+                    'sta_password': $('#wifi-pass').val()
+                }),
+                success: function(data){
+                    console.log(data);
+                    $("#wifi-status").text(data["sta_active"].toString())
+                    
+                    html = '<option>Select Wifi..</option>'
+                    $.each(data["sta_networks"], function(i, wifi){
+                        html += '<option value="' + wifi['ssid'] + '"'
+                        if (data["sta_connected_to"] == wifi['ssid'])
+                            html += ' selected'
+                        html += '>'+wifi['ssid']+'</option>'
+                    })
+                    console.log(html)
+                    $("#wifi-ssid").html(html)
+                    $('#set_sta').children('span').hide();
+                },
+                dataType: 'json'
+            }).fail(function(r,y,v){
+                console.log("failed");
+                $('#set_sta').children('span').hide();
+            });
+        });
+
         $('#toggle-hotspot').click(function(){
             $.getJSON({
                 url: '/toggle/hotspot',
