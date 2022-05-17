@@ -1,5 +1,8 @@
 import socket
 import os
+import time
+
+import select
 
 from config import config
 
@@ -26,6 +29,8 @@ def http_post(url, file, lock):
     s.settimeout(5)
     s.connect(address)
 
+    buf = bytearray(1024)
+    lock.acquire()
     head = headers.format(
         path=path,
         content_length=os.stat(file)[6],
@@ -33,9 +38,6 @@ def http_post(url, file, lock):
         auth=config.web_token,
     ).encode('utf8')
     print(head)
-
-    buf = bytearray(1024)
-    lock.acquire()
     with open(file) as f:
         s.send(head)
         while 1:
@@ -45,6 +47,15 @@ def http_post(url, file, lock):
                 break
             s.write(buf[:l])
             print(buf[:l])
+    # TODO: readline blocks
+    poller = select.poll()
+    poller.register(s, select.POLLIN)
+    res = poller.poll(1000)  # time in milliseconds
+    if not res:
+        # s is still not ready for input, i.e. operation timed out
+        lock.release()
+        print("Timeout!")
+        return None, None
     _, status_code, _ = s.readline().decode().strip().split(" ", 2)
     print(status_code)
     if status_code == "200":
