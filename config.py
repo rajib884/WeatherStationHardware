@@ -16,6 +16,8 @@ class Config:
             "cs": 5,
 
             "multithreaded_server": True,
+            "arduino_addr": 8,
+
 
             "web_server": "http://192.168.0.103:8000",
             "web_token": "966259f9553c20f6620737dc334b24ee31b6ae57",

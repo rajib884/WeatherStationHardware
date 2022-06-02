@@ -18,6 +18,7 @@ except ModuleNotFoundError:
 
 import sdcard
 from ntime import datetime
+from anemometer import anemometer
 from bmp180 import BMP180
 from lcd import lcd
 from wifimngr import wifi
@@ -88,8 +89,9 @@ def main():
         start = time.ticks_ms()
         bmp180.blocking_read()
         dht11.measure()
+        anemometer.update()
         with open(f'/sd/{datetime.date_str}.csv', 'a') as f:
-            t = f"{datetime.datetime_str},{bmp180.temperature:07.4f},{bmp180.pressure:06.0f},{dht11.temperature():02d},{dht11.humidity():02d}\n"
+            t = f"{datetime.datetime_str},{bmp180.temperature:07.4f},{bmp180.pressure:06.0f},{dht11.temperature():02d},{dht11.humidity():02d},{anemometer.cardinal}\n"
             print(t, end="")
             f.write(t)
 
@@ -104,9 +106,9 @@ def main():
         f.write(json.dumps({
             'date': datetime.datetime_str,
             'temperature': bmp180.temperature,
-            'humidity': round(dht11.humidity(), 0),
-            'pressure': round(bmp180.pressure, 0),
-            'sensor': 5,  # choice([1, 2, 4]),
+            'humidity': int(round(dht11.humidity(), 0)),
+            'pressure': int(round(bmp180.pressure, 0)),
+            'sensor': config.device_id,
             'air_speed': 0.0,
             'air_direction': 'N',
         }))
@@ -114,7 +116,7 @@ def main():
         file_lock.release()
 
         lcd.putstr(
-            f"{chr(0)}{bmp180.temperature:04.1f}{chr(4)}C {chr(1)}{bmp180.pressure:06.0f} {chr(2)}{dht11.humidity():02d}%",
+            f"{chr(0)}{bmp180.temperature:04.1f}{chr(4)}C {chr(1)}{bmp180.pressure/101325:06.4f} {chr(2)}{dht11.humidity():02d}%{chr(3)}{anemometer.speed:3.1f} {anemometer.cardinal:<2}",
             x=0, y=0)
         gc.collect()
         print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
@@ -136,9 +138,10 @@ def send_data():
             os.stat("to_send.json")
         except OSError:
             print("No data available")
+            time.sleep_ms(100)
             continue
 
-        lcd.putstr(f"{chr(5)}{chr(5)}", x=5, y=1)
+        lcd.putstr(f"{chr(5)}{chr(5)}", x=9, y=1)
         error = True
         # data = []
         # more_to_send = False
