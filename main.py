@@ -9,6 +9,7 @@ import json
 import _thread
 
 from config import config
+from display import display
 from req import http_post
 
 try:
@@ -20,7 +21,6 @@ import sdcard
 from ntime import datetime
 from anemometer import anemometer
 from bmp180 import BMP180
-from lcd import lcd
 from wifimngr import wifi
 from local_server import server
 
@@ -32,47 +32,70 @@ p12.value(1)
 try:
     os.remove("to_send.json")
     print("Removes 'to_send.json")
+    display.print("Removed previous temp files")
 except:
     pass
+
 
 # if p13.value():
 #     print("\n\nPin 13 is not low, exiting..\n\n")
 #     sys.exit()
 
+# def TFTColor(R, G, B):
+#     return ((R & 0xF8) << 8) | ((G & 0xFC) << 3) | (B >> 3)
+
 
 def main():
-    lcd.putstr("    IoT Based\nWeather Station!", True, 2000)
+    display.print('IoT Based Weather Station!', x=0, y=0, center=True, fill=True)
+    display.next_line()
+
     wifi.initialize()
-    lcd.putstr("Starting Server", True)
+    display.next_line()
+
+    display.print(f"{'Starting Server'}")
     _thread.start_new_thread(server.run, ())
-    lcd.putstr("Server Started", True)
+    display.print(f"Server Started at", x=2)
     if wifi.wlan_sta.isconnected():
-        lcd.putstr(wifi.wlan_sta.ifconfig()[0], wait_ms=1000, x=0, y=1)
-    elif wifi.wlan_ap.active():
-        lcd.putstr(wifi.wlan_ap.ifconfig()[0], wait_ms=1000, x=0, y=1)
-    if p13.value():
-        print("\n\nPin 13 is not low, exiting..\n\n")
-        sys.exit()
-    lcd.putstr("  Getting time", True)
-    datetime.update()
-    print(f"Time is {datetime.datetime_str}")
-    lcd.putstr(f"   {datetime.date_str}       {datetime.time_str}", True, 1000)
+        display.print(f"WiFi {wifi.wlan_sta.ifconfig()[0]}:5000", x=2)
+    else:
+        display.print('WiFi  ---', x=2)
+    if wifi.wlan_ap.active():
+        display.print(f"Hotspot {wifi.wlan_ap.ifconfig()[0]}:5000", x=2)
+    else:
+        display.print('Hotspot  ---', x=2)
+    display.next_line()
 
-    dht11 = dht.DHT11(machine.Pin(config.dht))
-    # lcd.putstr("DHT")
-
-    lcd.putstr("BMP180..", True)
-    bmp180 = BMP180(config.i2c)
-    bmp180.oversample_sett = 3
-    lcd.putstr("BMP180 Initiated", True)
-
-    # lcd.move_to(0, 1)
-    lcd.putstr("SD Card..", x=0, y=1)
-    sd = sdcard.SDCard(machine.SPI(config.spi), machine.Pin(config.cs))
+    gc.collect()
+    display.print("SD Card..")
+    sd = sdcard.SDCard(config.spi, machine.Pin(config.cs_sd))
     os.mount(sd, '/sd')
     # lcd.move_to(0, 1)
-    lcd.putstr("SD Card Mounted", False, 500, x=0, y=1)
+    display.print("SD Card Mounted", overwrite=True)
     print("SD Card Mounted")
+
+    dht11 = dht.DHT11(machine.Pin(config.dht))
+    display.print("DHT..")
+    while 1:
+        try:
+            dht11.measure()
+            break
+        except:
+            display.print("DHT Error..", overwrite=True)
+            time.sleep_ms(100)
+    display.print("DHT Initiated", overwrite=True)
+
+    display.print("BMP180..")
+    bmp180 = BMP180(config.i2c)
+    bmp180.oversample_sett = 3
+    display.print("BMP180 Initiated", overwrite=True)
+    display.next_line()
+
+    display.print('Getting time', )
+    datetime.update()
+    print(f"Time is {datetime.datetime_str}")
+    display.print(datetime.date_str, x=2)
+    display.print(datetime.time_str, x=2)
+
     # lcd.clear()
 
     # response = requests.post(
@@ -82,7 +105,10 @@ def main():
     # )
     # print(response.status_code)
     # print(response.content)
-    lcd.putstr("", True)
+    gc.collect()
+    display.print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
+    time.sleep_ms(2000)
+    display.clear()
     _thread.start_new_thread(show_time, ())
     _thread.start_new_thread(send_data, ())
     while 1:
@@ -90,10 +116,12 @@ def main():
         bmp180.blocking_read()
         dht11.measure()
         anemometer.update()
+        display.lock.acquire()
         with open(f'/sd/{datetime.date_str}.csv', 'a') as f:
             t = f"{datetime.datetime_str},{bmp180.temperature:07.4f},{bmp180.pressure:06.0f},{dht11.temperature():02d},{dht11.humidity():02d},{anemometer.cardinal}\n"
             print(t, end="")
             f.write(t)
+        display.lock.release()
 
         file_lock.acquire()
         try:
@@ -110,13 +138,14 @@ def main():
             'pressure': int(round(bmp180.pressure, 0)),
             'sensor': config.device_id,
             'air_speed': 0.0,
-            'air_direction': 'N',
+            'air_direction': anemometer.cardinal,
         }))
         f.write("]")
+        f.close()
         file_lock.release()
 
-        lcd.putstr(
-            f"{chr(0)}{bmp180.temperature:04.1f}{chr(4)}C {chr(1)}{bmp180.pressure/101325:06.4f} {chr(2)}{dht11.humidity():02d}%{chr(3)}{anemometer.speed:3.1f} {anemometer.cardinal:<2}",
+        display.print(
+            f"{chr(0)}{bmp180.temperature:04.1f}{chr(4)}C {chr(1)}{bmp180.pressure / 101325:06.4f} {chr(2)}{dht11.humidity():02d}%{chr(3)}{anemometer.speed:3.1f} {anemometer.cardinal:<2}",
             x=0, y=0)
         gc.collect()
         print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
@@ -127,8 +156,16 @@ def main():
 
 def show_time():
     while 1:
-        lcd.putstr(datetime.time_str, x=8, y=1)
-        time.sleep_ms(900)
+        display.print(datetime.time_str, center=True, y=1)
+        if wifi.wlan_sta.isconnected():
+            display.print(f"{wifi.wlan_sta.ifconfig()[0]}:5000", center=True, fill=True, y=2)
+        else:
+            display.print('---', center=True, y=2, fill=True)
+        if wifi.wlan_ap.active():
+            display.print(f"{wifi.wlan_ap.ifconfig()[0]}:5000", center=True, fill=True, y=3)
+        else:
+            display.print('---', center=True, fill=True, y=3)
+        time.sleep_ms(500)
 
 
 def send_data():
@@ -141,7 +178,7 @@ def send_data():
             time.sleep_ms(100)
             continue
 
-        lcd.putstr(f"{chr(5)}{chr(5)}", x=9, y=1)
+        display.print(f"Sending..", x=0, y=4, fill=True)
         error = True
         # data = []
         # more_to_send = False
@@ -173,14 +210,14 @@ def send_data():
         #         pass
         # else:
         #     error = False
-
-        try:
-            response, status_code = http_post(f'{config.web_server}/api/sensors/add', "to_send.json", file_lock)
-            if status_code == "200":
-                error = False
-        except:
-            pass
-        lcd.putstr('Er ' if error else 'OK ', x=5, y=1, wait_ms=100)
+        if wifi.wlan_sta.isconnected():
+            try:
+                response, status_code = http_post(f'{config.web_server}/api/sensors/add', "to_send.json", file_lock)
+                if status_code == "200":
+                    error = False
+            except:
+                print("Error in http_post")
+        display.print('  Error' if error else '  Sent', y=4, fill=True)
 
 
 if __name__ == '__main__':
