@@ -12,19 +12,18 @@ class Config:
             "freq": 100000,
 
             "dht": 15,
-            "spi": 2,
-            "cs": 5,
+            # "spi": 2,
+            "cs_sd": 5,
 
-            "multithreaded_server": True,
             "arduino_addr": 8,
 
+            "multithreaded_server": False,
 
             "web_server": "http://192.168.0.103:8000",
             "web_token": "966259f9553c20f6620737dc334b24ee31b6ae57",
             "device_id": 5,
             "delay_reading": 2000,
-            "delay_sending": 5000,
-            "max_line_send": 10,
+            "delay_sending": 15000,
 
             "sta_enable": True,
             "ap_enable": False,
@@ -41,6 +40,18 @@ class Config:
             scl=machine.Pin(self.scl),
             sda=machine.Pin(self.sda),
             freq=self.freq
+        )
+        self.spi = machine.SPI(
+            2,
+            baudrate=20000000,
+            # baudrate=30000000,
+            polarity=0,
+            phase=0,
+            bits=8,
+            firstbit=machine.SPI.MSB,
+            # sck=machine.Pin(14),
+            # mosi=machine.Pin(13),
+            # miso=machine.Pin(12)
         )
 
     def write_config(self):
