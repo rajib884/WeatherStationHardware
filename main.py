@@ -46,31 +46,29 @@ except:
 
 
 def main():
-    display.print('IoT Based Weather Station!', x=0, y=0, center=True, fill=True)
-    display.next_line()
+    display.clear()
 
     wifi.initialize()
-    display.next_line()
 
-    display.print(f"{'Starting Server'}")
+    display.print('Starting Server')
     _thread.start_new_thread(server.run, ())
-    display.print(f"Server Started at", x=2)
     if wifi.wlan_sta.isconnected():
-        display.print(f"WiFi {wifi.wlan_sta.ifconfig()[0]}:5000", x=2)
+        display.print(f"{wifi.wlan_sta.ifconfig()[0]}:5000", x=2)
     else:
-        display.print('WiFi  ---', x=2)
+        display.print('---', x=2)
     if wifi.wlan_ap.active():
-        display.print(f"Hotspot {wifi.wlan_ap.ifconfig()[0]}:5000", x=2)
+        display.print(f"{wifi.wlan_ap.ifconfig()[0]}:5000", x=2)
     else:
-        display.print('Hotspot  ---', x=2)
-    display.next_line()
+        display.print('---', x=2)
 
     gc.collect()
     display.print("SD Card..")
+    gc.collect()
+    print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
     sd = sdcard.SDCard(config.spi, machine.Pin(config.cs_sd))
     os.mount(sd, '/sd')
     # lcd.move_to(0, 1)
-    display.print("SD Card Mounted", overwrite=True)
+    display.print(" Mounted", overwrite=True, x=7)
     print("SD Card Mounted")
 
     dht11 = dht.DHT11(machine.Pin(config.dht))
@@ -80,17 +78,16 @@ def main():
             dht11.measure()
             break
         except:
-            display.print("DHT Error..", overwrite=True)
+            display.print(" Error..", overwrite=True, x=3)
             time.sleep_ms(100)
-    display.print("DHT Initiated", overwrite=True)
+    display.print(" Initiated", overwrite=True, x=3)
 
     display.print("BMP180..")
     bmp180 = BMP180(config.i2c)
     bmp180.oversample_sett = 3
-    display.print("BMP180 Initiated", overwrite=True)
-    display.next_line()
+    display.print(" Initiated", overwrite=True, x=6)
 
-    display.print('Getting time', )
+    display.print('Getting time..', )
     datetime.update()
     print(f"Time is {datetime.datetime_str}")
     display.print(datetime.date_str, x=2)
@@ -109,6 +106,8 @@ def main():
     display.print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
     time.sleep_ms(2000)
     display.clear()
+    display.make_layout()
+
     _thread.start_new_thread(show_time, ())
     _thread.start_new_thread(send_data, ())
     while 1:
@@ -116,11 +115,20 @@ def main():
         bmp180.blocking_read()
         dht11.measure()
         anemometer.update()
-        display.lock.acquire()
-        with open(f'/sd/{datetime.date_str}.csv', 'a') as f:
-            t = f"{datetime.datetime_str},{bmp180.temperature:07.4f},{bmp180.pressure:06.0f},{dht11.temperature():02d},{dht11.humidity():02d},{anemometer.cardinal}\n"
-            print(t, end="")
-            f.write(t)
+        display.lock.acquire()  # display and sdcard both uses same spi, so don't make changes via other thread
+        gc.collect()
+        print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
+        while 1:
+            try:
+                f = open(f'sd/{datetime.date_str}.csv', 'a')
+                break
+            except OSError:
+                print("OSError, Retrying..")
+                time.sleep_ms(100)
+        t = f"{datetime.datetime_str},{bmp180.temperature:07.4f},{bmp180.pressure:06.0f},{dht11.temperature():02d},{dht11.humidity():02d},{anemometer.cardinal}\n"
+        print(t, end="")
+        f.write(t)
+        f.close()
         display.lock.release()
 
         file_lock.acquire()
@@ -144,9 +152,10 @@ def main():
         f.close()
         file_lock.release()
 
-        display.print(
-            f"{chr(0)}{bmp180.temperature:04.1f}{chr(4)}C {chr(1)}{bmp180.pressure / 101325:06.4f} {chr(2)}{dht11.humidity():02d}%{chr(3)}{anemometer.speed:3.1f} {anemometer.cardinal:<2}",
-            x=0, y=0)
+        display.print(f"{bmp180.temperature:05.2f}{chr(186)}C", x=3, y=2)
+        display.print(f"{bmp180.pressure / 101325:07.5f} atm", x=3, y=3)
+        display.print(f"{dht11.humidity():02d}%", x=3, y=4)
+        display.print(f"{anemometer.speed:3.1f} km/h, {anemometer.cardinal:<2}", x=3, y=5)
         gc.collect()
         print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
 
@@ -156,15 +165,15 @@ def main():
 
 def show_time():
     while 1:
-        display.print(datetime.time_str, center=True, y=1)
+        display.print(datetime.time_str, y=0, x=13)
         if wifi.wlan_sta.isconnected():
-            display.print(f"{wifi.wlan_sta.ifconfig()[0]}:5000", center=True, fill=True, y=2)
+            display.print(f"{wifi.wlan_sta.ifconfig()[0]}:5000", center=True, fill=True, y=7, x=0)
         else:
-            display.print('---', center=True, y=2, fill=True)
+            display.print('---', center=True, y=7, x=0, fill=True)
         if wifi.wlan_ap.active():
-            display.print(f"{wifi.wlan_ap.ifconfig()[0]}:5000", center=True, fill=True, y=3)
+            display.print(f"{wifi.wlan_ap.ifconfig()[0]}:5000", center=True, fill=True, y=8, x= 0)
         else:
-            display.print('---', center=True, fill=True, y=3)
+            display.print('---', center=True, fill=True, y=8, x=0)
         time.sleep_ms(500)
 
 
@@ -178,7 +187,7 @@ def send_data():
             time.sleep_ms(100)
             continue
 
-        display.print(f"Sending..", x=0, y=4, fill=True)
+        display.print(f"Sending..", x=0, y=9, fill=True)
         error = True
         # data = []
         # more_to_send = False
@@ -217,7 +226,7 @@ def send_data():
                     error = False
             except:
                 print("Error in http_post")
-        display.print('  Error' if error else '  Sent', y=4, fill=True)
+        display.print('  Error' if error else '  Sent', y=9, fill=True)
 
 
 if __name__ == '__main__':
