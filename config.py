@@ -43,8 +43,7 @@ class Config:
         )
         self.spi = machine.SPI(
             2,
-            baudrate=20000000,
-            # baudrate=30000000,
+            baudrate=80000000,
             polarity=0,
             phase=0,
             bits=8,
