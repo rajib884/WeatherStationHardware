@@ -1,24 +1,29 @@
 import _thread
 import time
 
-from ILI9225 import tft
+from ILI9225 import TFT
+from config import config
 
 
 class Display:
+    tft = TFT(config.spi, aDC=16, aReset=17, aCS=4)
+
     def __init__(self):
         self.offset_x = 4
         self.offset_y = 15
-        self.height = 10
-        self.width = 6
+        self.height = 14
+        self.width = 8
 
         self.cpos_x = 0
         self.cpos_y = 0
         self.lock = _thread.allocate_lock()
+
+        self.tft.init()
         self.splash_title()
 
     def splash_title(self):
         self.lock.acquire()
-        tft.show_imgbuf('splash.imgbuf')
+        self.tft.show_imgbuf('splash.imgbuf')
         self.lock.release()
         # self.clear()
         # tft.text((38, 85), 'IOT Based', aSize=2)
@@ -26,9 +31,9 @@ class Display:
         time.sleep_ms(1000)
         self.clear()
 
-    def print(self, text: str, overwrite=False, x: int = None, y: int = None, fill=False, center=False, color=None):
+    def print(self, text: str, overwrite=False, x: int = None, y: int = None, fill=False, center=False):
         if overwrite:
-            self.cpos_y = max(0, self.cpos_y-1)
+            self.cpos_y = max(0, self.cpos_y - 1)
 
         if x is None:
             x = self.cpos_x
@@ -40,22 +45,22 @@ class Display:
         elif fill and not center:
             text = f"{text:29}"
         elif not fill and center:
-            x = (29 - len(text))//2
+            x = (29 - len(text)) // 2
 
         px = self.width * x + self.offset_x
         py = self.height * y + self.offset_y
         self.lock.acquire()
-        tft.text((px, py), text, aColor=color, nowrap=True)
+        self.tft.text((px, py), text, nowrap=True)
         self.lock.release()
 
-        self.next_line()
+        self.skip_line()
 
-    def next_line(self):
+    def skip_line(self):
         self.cpos_x = 0
         self.cpos_y += 1
 
     def clear(self):
-        tft.clear()
+        self.tft.clear()
         self.cpos_x = 0
         self.cpos_y = 0
 
