@@ -50,7 +50,7 @@ def http_post(url, file, lock):
     # TODO: readline blocks
     poller = select.poll()
     poller.register(s, select.POLLIN)
-    res = poller.poll(1000)  # time in milliseconds
+    res = poller.poll(5000)  # time in milliseconds
     if not res:
         # s is still not ready for input, i.e. operation timed out
         lock.release()
@@ -58,7 +58,7 @@ def http_post(url, file, lock):
         return None, None
     _, status_code, _ = s.readline().decode().strip().split(" ", 2)
     print(status_code)
-    if status_code == "200":
+    if status_code == "200" or status_code == "400":
         print(f"removing {file}")
         os.remove(file)
     lock.release()
