@@ -67,36 +67,55 @@ class TFT(object):
         fh = 14
         px, py = aPos
         w = fw  # + 1
-        char = self.char
-        for c in aString:
-            char((px, py), c)
-            px += w
-            if px + w > self._size[0]:
-                if nowrap:
-                    break
-                else:
-                    py += fh + 1
-                    px = aPos[0]
-
-    def char(self, aPos, aChar):
+        # char = self.char
         start = 32
         end = 192
-        ci = ord(aChar)
         l = 8 * 14 * 2
         buf = bytearray(14 * 2)
-        if start <= ci < end:
-            t = (ci - start) * l
-            with open('imgbuf/font.imgbuf', 'rb') as f:
-                f.seek(t)
-                r = f.readinto
-                w = self.spi.write
-                self._setwindowloc(aPos, (aPos[0] + 8 - 1, aPos[1] + 14 - 1))
-                self.dc.value(1)
-                self.cs.value(0)
-                for _ in range(8):
-                    r(buf)
-                    w(buf)
-                self.cs.value(1)
+        dc = self.dc.value
+        cs = self.cs.value
+        with open('imgbuf/font.imgbuf', 'rb') as f:
+            r = f.readinto
+            write = self.spi.write
+            for c in aString:
+                # char((px, py), c)
+                ci = ord(c)
+                if start <= ci < end:
+                    f.seek((ci - start) * l)
+                    self._setwindowloc((px, py), (px + 8 - 1, py + 14 - 1))
+                    dc(1)
+                    cs(0)
+                    for _ in range(8):
+                        r(buf)
+                        write(buf)
+                    cs(1)
+                px += w
+                if px + w > self._size[0]:
+                    if nowrap:
+                        break
+                    else:
+                        py += fh + 1
+                        px = aPos[0]
+
+    # def char(self, aPos, aChar):
+    #     start = 32
+    #     end = 192
+    #     ci = ord(aChar)
+    #     l = 8 * 14 * 2
+    #     buf = bytearray(14 * 2)
+    #     if start <= ci < end:
+    #         t = (ci - start) * l
+    #         with open('imgbuf/font.imgbuf', 'rb') as f:
+    #             f.seek(t)
+    #             r = f.readinto
+    #             w = self.spi.write
+    #             self._setwindowloc(aPos, (aPos[0] + 8 - 1, aPos[1] + 14 - 1))
+    #             self.dc.value(1)
+    #             self.cs.value(0)
+    #             for _ in range(8):
+    #                 r(buf)
+    #                 w(buf)
+    #             self.cs.value(1)
 
     def vline(self, aStart, aLen, aColor):
         # Draw a vertical line from aStart for aLen. aLen may be negative.
@@ -325,7 +344,7 @@ class TFT(object):
         with open(file, 'rb') as f:
             width = int.from_bytes(f.read(1), 'little')
             height = int.from_bytes(f.read(1), 'little')
-            print(f"{width}x{height}")
+            # print(f"{width}x{height}")
             l = width * height * 2
             self._setwindowloc(aPos, (aPos[0] + width - 1, aPos[1] + height - 1))
             self.dc.value(1)
