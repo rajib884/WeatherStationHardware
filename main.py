@@ -23,11 +23,10 @@ from anemometer import anemometer
 from bmp180 import BMP180
 from wifimngr import wifi
 from local_server import server
+from rotary import Rotary
+from rotary_irq_esp import RotaryIRQ
 
 file_lock = _thread.allocate_lock()
-p12 = machine.Pin(12, machine.Pin.OUT)
-p13 = machine.Pin(13, machine.Pin.IN)
-p12.value(1)
 
 try:
     os.remove("to_send.json")
@@ -47,7 +46,6 @@ except:
 
 def main():
     display.clear()
-
     wifi.initialize()
 
     display.print('Starting Server')
@@ -104,6 +102,17 @@ def main():
     # print(response.content)
     gc.collect()
     display.print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
+    r = RotaryIRQ(
+        pin_num_clk=34,
+        pin_num_dt=35,
+        min_val=0,
+        max_val=10,
+        reverse=False,
+        range_mode=Rotary.RANGE_UNBOUNDED,
+        pull_up=False,
+        half_step=True,
+        invert=False
+    )
     time.sleep_ms(2000)
     display.clear()
     display.make_layout()
@@ -115,7 +124,6 @@ def main():
         bmp180.blocking_read()
         dht11.measure()
         anemometer.update()
-        display.lock.acquire()  # display and sdcard both uses same spi, so don't make changes via other thread
         gc.collect()
         print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
         while 1:
@@ -129,7 +137,6 @@ def main():
         print(t, end="")
         f.write(t)
         f.close()
-        display.lock.release()
 
         file_lock.acquire()
         try:
@@ -153,9 +160,11 @@ def main():
         file_lock.release()
 
         display.print(f"{bmp180.temperature:05.2f}{chr(186)}C", x=3, y=2)
+        display.print(f"{dht11.humidity():02d}%", x=16, y=2)
         display.print(f"{bmp180.pressure / 101325:07.5f} atm", x=3, y=3)
-        display.print(f"{dht11.humidity():02d}%", x=3, y=4)
-        display.print(f"{anemometer.speed:3.1f} km/h, {anemometer.cardinal:<2}", x=3, y=5)
+        display.print(f"{anemometer.speed:3.1f} km/h", x=3, y=4)
+        display.print(f"{anemometer.cardinal:<2}", x=16, y=4)
+        # display.print(f"{r.value()}", x=3, y=6)
         gc.collect()
         print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
 
@@ -165,15 +174,26 @@ def main():
 
 def show_time():
     while 1:
+        if wifi.wlan_sta.active():
+            if wifi.wlan_sta.isconnected():
+                display.icon('imgbuf/wifi.imgbuf', 0, 0)
+            else:
+                display.icon('imgbuf/wifi-exclamation.imgbuf', 0, 0)
+        else:
+            display.icon('imgbuf/wifi-slash.imgbuf', 0, 0)
+        if wifi.wlan_ap.active():
+            display.icon('imgbuf/signal-stream.imgbuf', 3, 0)
+        else:
+            display.icon('imgbuf/signal-stream-slash.imgbuf', 3, 0)
         display.print(datetime.time_str, y=0, x=13)
         if wifi.wlan_sta.isconnected():
-            display.print(f"{wifi.wlan_sta.ifconfig()[0]}:5000", center=True, fill=True, y=7, x=0)
+            display.print(f"{wifi.wlan_sta.ifconfig()[0]}:5000", center=True, fill=True, y=11, x=0)
         else:
-            display.print('---', center=True, y=7, x=0, fill=True)
+            display.print('---', center=True, y=11, x=0, fill=True)
         if wifi.wlan_ap.active():
-            display.print(f"{wifi.wlan_ap.ifconfig()[0]}:5000", center=True, fill=True, y=8, x= 0)
+            display.print(f"{wifi.wlan_ap.ifconfig()[0]}:5000", center=True, fill=True, y=12, x=0)
         else:
-            display.print('---', center=True, fill=True, y=8, x=0)
+            display.print('---', center=True, fill=True, y=12, x=0)
         time.sleep_ms(500)
 
 
@@ -187,7 +207,7 @@ def send_data():
             time.sleep_ms(100)
             continue
 
-        display.print(f"Sending..", x=0, y=9, fill=True)
+        display.print(f"Sending..", x=3, y=10, fill=True)
         error = True
         # data = []
         # more_to_send = False
@@ -226,7 +246,7 @@ def send_data():
                     error = False
             except:
                 print("Error in http_post")
-        display.print('  Error' if error else '  Sent', y=9, fill=True)
+        display.print('Error' if error else 'Sent', x=3, y=10, fill=True)
 
 
 if __name__ == '__main__':
