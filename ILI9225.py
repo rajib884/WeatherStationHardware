@@ -86,7 +86,7 @@ class TFT(object):
         buf = bytearray(14 * 2)
         if start <= ci < end:
             t = (ci - start) * l
-            with open('font.imgbuf', 'rb') as f:
+            with open('imgbuf/font.imgbuf', 'rb') as f:
                 f.seek(t)
                 r = f.readinto
                 w = self.spi.write
