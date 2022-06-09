@@ -1,6 +1,6 @@
 import time
 import network
-from lcd import lcd
+from display import display
 from config import config
 
 
@@ -28,38 +28,39 @@ class WiFi:
         if not config.sta_enable:
             self.wlan_sta.active(False)
         else:
-            lcd.putstr("Connecting Wifi", True)
+            display.print("Connecting to Wifi..")
             if self.wlan_sta.isconnected():
-                lcd.putstr("Wifi Connected ", True, 200)
-                return
-
-            self.wlan_sta.active(True)
-            networks = self.wlan_sta.scan()
-
-            for ssid, bssid, channel, rssi, authmode, hidden in sorted(networks, key=lambda x: x[3], reverse=True):
-                ssid = ssid.decode('utf-8')
-                print(f"ssid: {ssid} chan: {channel} rssi: {rssi} authmode: {self.authmode.get(authmode, '?')}")
-                lcd.putstr(' ' * 16, x=0, y=1)
-                lcd.putstr(ssid[:16], x=0, y=1)
-                if authmode > 0:
-                    if ssid in self.profiles:
-                        connected = self.connect(ssid=ssid, password=self.profiles[ssid])
-                else:
-                    continue
-                    # don't connect to open wifi
-                    # connected = self._connect(ssid, None)
-                if connected is not False:
-                    lcd.putstr("Wifi Connected ", wait_ms=200, x=0, y=0)
-                    break
-
-            if config.ap_enable or not connected:
-                lcd.putstr("Starting Hotspot", True)
-                # Turn on wifi hotspot
-                self.hotspot(True)
-                lcd.putstr("Hotspot Started", wait_ms=200, x=0, y=1)
+                display.print("Wifi Connected", x=2)
             else:
-                self.hotspot(False)
-            return connected
+                self.wlan_sta.active(True)
+                networks = self.wlan_sta.scan()
+                current_line = display.cpos_y
+                for ssid, bssid, channel, rssi, authmode, hidden in sorted(networks, key=lambda x: x[3], reverse=True):
+                    ssid = ssid.decode('utf-8')
+                    print(f"ssid: {ssid} chan: {channel} rssi: {rssi} authmode: {self.authmode.get(authmode, '?')}")
+                    display.print(ssid, x=2, y=current_line, fill=True)
+                    if authmode > 0:
+                        if ssid in self.profiles:
+                            connected = self.connect(ssid=ssid, password=self.profiles[ssid])
+                    else:
+                        continue
+                        # don't connect to open wifi
+                        # connected = self._connect(ssid, None)
+                    if connected is not False:
+                        display.print("Wifi Connected", x=2)
+                        break
+                    else:
+                        display.print("Failed to connect", x=2)
+
+        if config.ap_enable or not connected:
+            display.print("Starting Hotspot")
+            # Turn on wifi hotspot
+            self.hotspot(True)
+            display.print("Hotspot Started")
+        else:
+            self.hotspot(False)
+            display.print("Hotspot off")
+        return connected
 
     def scan(self):
         networks = self.wlan_sta.scan()
