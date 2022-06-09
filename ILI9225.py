@@ -2,15 +2,12 @@
 # Translated by Guy Carver from the ST7735 sample code.
 # Modirfied for micropython-esp32 by boochow
 import math
-import os
 
 import machine
 import time
 
 import micropython
 
-from config import config
-from customfont import font
 
 
 # # @micropython.native
@@ -18,11 +15,6 @@ def clamp(aValue, aMin, aMax):
     return max(aMin, min(aMax, aValue))
 
 
-# @micropython.native
-def TFTColor(aR, aG, aB):
-    # Create a 16 bit rgb value from the given R,G,B from 0-255.
-    # This assumes rgb 565 layout and will be incorrect for bgr.
-    return ((aR & 0xF8) << 8) | ((aG & 0xFC) << 3) | (aB >> 3)
 
 
 def split_i16(i):
@@ -30,11 +22,6 @@ def split_i16(i):
 
 
 class TFT(object):
-
-    @staticmethod
-    def color(aR, aG, aB):
-        # Create a 565 rgb TFTColor value
-        return TFTColor(aR, aG, aB)
 
     def __init__(self, spi, aDC, aReset, aCS):
         # aLoc SPI pin location is either 1 for 'X' or 2 for 'Y'.
@@ -44,24 +31,20 @@ class TFT(object):
         self.dc = machine.Pin(aDC, machine.Pin.OUT, machine.Pin.PULL_DOWN)
         self.reset = machine.Pin(aReset, machine.Pin.OUT, machine.Pin.PULL_DOWN)
         self.cs = machine.Pin(aCS, machine.Pin.OUT, machine.Pin.PULL_DOWN)
-        self.cs(1)
+        self.cs.value(1)
         self.spi = spi
         self.colorData = bytearray(2)
         self.windowLocData = bytearray(4)
 
         self.text_color = 0xffff
         # self.background_color = 0x1f  # Blue
-        self.background_color = 0x198a
+        self.background_color = 0x0
 
-    def size(self):
-        return self._size
 
-    # #   @micropython.native
     # def on(self, aTF=True):  #todo
     #     '''Turn display on or off.'''
     #     self._writecommand(TFT.DISPON if aTF else TFT.DISPOFF)
 
-    # #   @micropython.native
     # def invertcolor(self, aBool):  #todo
     #     '''Invert the color data IE: Black = White.'''
     #     self._writecommand(TFT.INVON if aBool else TFT.INVOFF)
@@ -84,209 +67,48 @@ class TFT(object):
         self._setwindowloc((0, 0), self._size)
         self.vert_scroll(0, self._size[1], 0)
 
-    def vert_scroll(self, top, scrollines, offset):
-        if offset <= -scrollines or offset >= scrollines:
-            offset = 0
-        vsp = top + offset
-        if offset < 0:
-            vsp += scrollines
-        sea = top + scrollines - 1
-        self.register(0x32, top)
-        self.register(0x31, sea)
-        self.register(0x33, vsp - top)
-
-    #  @micropython.native
-    def pixel(self, aPos, aColor):
-        # Draw a pixel at the given position
-        if 0 <= aPos[0] < self._size[0] and 0 <= aPos[1] < self._size[1]:
-            self._setwindowpoint(aPos)
-            self._pushcolor(aColor)
 
     # @micropython.native
-    def text(self, aPos, aString, aColor=None, aFont=None, aSize=1, nowrap=False, aBG=None):
-        # Draw a text at the given position.  If the string reaches the end of the
-        # display it is wrapped to aPos[0] on the next line.  aSize may be an integer
-        # which will size the font uniformly on w,h or a or any type that may be
-        # indexed with [0] or [1].
 
-        if aColor is None:
-            aColor = self.text_color
-        if aBG is None:
-            aBG = self.background_color
-
-        # Make a size either from single value or 2 elements.
-        if (type(aSize) == int) or (type(aSize) == float):
-            wh = (aSize, aSize)
-        else:
-            wh = aSize
-
-        if aFont is None:
-            fw = 5
-            fh = 8
-        else:
-            fw = aFont["Width"]
-            fh = aFont["Height"]
-
+    def text(self, aPos, aString, nowrap=False):
+        fw = 8
+        fh = 14
         px, py = aPos
-        w = wh[0] * fw + 1
-        char = self.char2
+        w = fw  # + 1
+        char = self.char
         for c in aString:
-            if aFont is None:
-                char((px, py), c, aColor, wh, aBG)
-            else:
-                self.char((px, py), c, aColor, aFont, wh, aBG)
+            char((px, py), c)
             px += w
-            # We check > rather than >= to let the right (blank) edge of the
-            # character print off the right of the screen.
             if px + w > self._size[0]:
                 if nowrap:
                     break
                 else:
-                    py += fh * wh[1] + 1
+                    py += fh + 1
                     px = aPos[0]
 
-    # @micropython.native
-    def char(self, aPos, aChar, aColor, aFont, aSizes, aBG=0):
-        # Draw a character at the given position using the given font and color.
-        # aSizes is a tuple with x, y as integer scales indicating the
-        # # of pixels to draw for each pixel in the character.
-
-        if aFont is None:
-            return
-
-        startchar = aFont['Start']
-        endchar = aFont['End']
-
+    def char(self, aPos, aChar):
+        start = 32
+        end = 192
         ci = ord(aChar)
-        if startchar <= ci <= endchar:
-            fontw = aFont['Width']
-            fonth = aFont['Height']
-            ci = (ci - startchar) * fontw
+        l = 8 * 14 * 2
+        buf = bytearray(14 * 2)
+        if start <= ci < end:
+            t = (ci - start) * l
+            with open('font.imgbuf', 'rb') as f:
+                f.seek(t)
+                r = f.readinto
+                w = self.spi.write
+                self._setwindowloc(aPos, (aPos[0] + 8 - 1, aPos[1] + 14 - 1))
+                self.dc.value(1)
+                self.cs.value(0)
+                for _ in range(8):
+                    r(buf)
+                    w(buf)
+                self.cs.value(1)
 
-            charA = aFont["Data"][ci:ci + fontw]
-            px = aPos[0]
-            if aSizes[0] <= 1 and aSizes[1] <= 1:
-                buf = bytearray(2 * fonth * fontw)
-                for q in range(fontw):
-                    c = charA[q]
-                    for r in range(fonth):  # 0, 1 ,2 ,3 ,4 ,5 ,6 ,7
-                        if c & 0x01:
-                            pos = 2 * (r * fontw + q)
-                            buf[pos] = aColor >> 8
-                            buf[pos + 1] = aColor & 0xff
-                        else:
-                            pos = 2 * (r * fontw + q)
-                            buf[pos] = aBG >> 8
-                            buf[pos + 1] = aBG & 0xff
-                        c >>= 1
-                self.image(aPos[0], aPos[1], aPos[0] + fontw - 1, aPos[1] + fonth - 1, buf)
-            else:
-                for c in charA:
-                    py = aPos[1]
-                    fillrect = self.fillrect
-                    for r in range(fonth):
-                        if c & 0x01:
-                            fillrect((px, py), aSizes, aColor)
-                        else:
-                            fillrect((px, py), aSizes, aBG)
-                        py += aSizes[1]
-                        c >>= 1
-                    px += aSizes[0]
 
     # @micropython.native
-    def char2(self, aPos, aChar, aColor, aSizes, aBG=None):
-        # Draw a character at the given position using the given font and color.
-        # aSizes is a tuple with x, y as integer scales indicating the
-        # # of pixels to draw for each pixel in the character.
-        if aBG is None:
-            aBG = self.background_color
 
-        startchar = 0  # 0
-        endchar = 254  # 254
-
-        ci = ord(aChar)
-        if startchar <= ci <= endchar:
-            fontw = 5
-            fonth = 8
-            ci = (ci - startchar) * fontw  # 458
-
-            charA = bytearray(font[ci:ci + fontw])  # bytearray(['0x20', '0x54', '0x54', '0x78', '0x40'])
-            px = aPos[0]  # 0
-            if aSizes[0] <= 1 and aSizes[1] <= 1:
-                buf = bytearray(2 * fonth * fontw)  # 80 byte buffer
-                for q in range(fontw):  # 0, 1, 2, 3, 4
-                    c = charA[q]  # 0x20
-                    for r in range(fonth):  # 0, 1 ,2 ,3 ,4 ,5 ,6 ,7
-                        if c & 0x01:
-                            pos = 2 * (r * fontw + q)
-                            buf[pos] = aColor >> 8
-                            buf[pos + 1] = aColor & 0xff
-                        else:
-                            pos = 2 * (r * fontw + q)
-                            buf[pos] = aBG >> 8
-                            buf[pos + 1] = aBG & 0xff
-                        c >>= 1
-                self.image(aPos[0], aPos[1], aPos[0] + fontw - 1, aPos[1] + fonth - 1, buf)
-            else:
-                for c in charA:
-                    py = aPos[1]
-                    fillrect = self.fillrect
-                    for r in range(fonth):
-                        if c & 0x01:
-                            fillrect((px, py), aSizes, aColor)
-                        else:
-                            fillrect((px, py), aSizes, aBG)
-                        py += aSizes[1]
-                        c >>= 1
-                    px += aSizes[0]
-
-    #   @micropython.native
-    def line(self, aStart, aEnd, aColor):
-        # Draws a line from aStart to aEnd in the given color.  Vertical or horizontal
-        # lines are forwarded to vline and hline.
-        if aStart[0] == aEnd[0]:
-            # Make sure we use the smallest y.
-            pnt = aEnd if (aEnd[1] < aStart[1]) else aStart
-            self.vline(pnt, abs(aEnd[1] - aStart[1]) + 1, aColor)
-        elif aStart[1] == aEnd[1]:
-            # Make sure we use the smallest x.
-            pnt = aEnd if aEnd[0] < aStart[0] else aStart
-            self.hline(pnt, abs(aEnd[0] - aStart[0]) + 1, aColor)
-        else:
-            px, py = aStart
-            ex, ey = aEnd
-            dx = ex - px
-            dy = ey - py
-            inx = 1 if dx > 0 else -1
-            iny = 1 if dy > 0 else -1
-
-            dx = abs(dx)
-            dy = abs(dy)
-            pixel = self.pixel
-            if dx >= dy:
-                dy <<= 1
-                e = dy - dx
-                dx <<= 1
-                while px != ex:
-                    pixel((px, py), aColor)
-                    if e >= 0:
-                        py += iny
-                        e -= dx
-                    e += dy
-                    px += inx
-            else:
-                dx <<= 1
-                e = dx - dy
-                dy <<= 1
-                while py != ey:
-                    pixel((px, py), aColor)
-                    if e >= 0:
-                        px += inx
-                        e -= dy
-                    e += dx
-                    py += iny
-
-    #   @micropython.native
     def vline(self, aStart, aLen, aColor):
         # Draw a vertical line from aStart for aLen. aLen may be negative.
         start = (clamp(aStart[0], 0, self._size[0]), clamp(aStart[1], 0, self._size[1]))
@@ -298,7 +120,6 @@ class TFT(object):
         self._setColor(aColor)
         self._draw(aLen)
 
-    #   @micropython.native
     def hline(self, aStart, aLen, aColor):
         # Draw a horizontal line from aStart for aLen. aLen may be negative.
         start = (clamp(aStart[0], 0, self._size[0]), clamp(aStart[1], 0, self._size[1]))
@@ -310,16 +131,7 @@ class TFT(object):
         self._setColor(aColor)
         self._draw(aLen)
 
-    #   @micropython.native
-    def rect(self, aStart, aSize, aColor):
-        # Draw a hollow rectangle.  aStart is the smallest coordinate corner
-        # and aSize is a tuple indicating width, height.
-        self.hline(aStart, aSize[0], aColor)
-        self.hline((aStart[0], aStart[1] + aSize[1] - 1), aSize[0], aColor)
-        self.vline(aStart, aSize[1], aColor)
-        self.vline((aStart[0] + aSize[0] - 1, aStart[1]), aSize[1], aColor)
 
-    #   @micropython.native
     def fillrect(self, aStart, aSize, aColor):
         # Draw a filled rectangle.  aStart is the smallest coordinate corner
         # and aSize is a tuple indicating width, height.
@@ -340,44 +152,6 @@ class TFT(object):
         self._setColor(aColor)
         self._draw(numPixels)
 
-    #   @micropython.native
-    def circle(self, aPos, aRadius, aColor):
-        x, y = aPos
-
-        self.colorData[0] = aColor >> 8
-        self.colorData[1] = aColor
-
-        f = 1 - aRadius
-        ddF_x = 1
-        ddF_y = -2 * aRadius
-        x1 = 0
-        y1 = aRadius
-
-        self._setwindowpoint((x, y + aRadius))
-        self._writedata(self.colorData)
-        dp = self.Draw_Pixel
-
-        dp(x, y + aRadius)
-        dp(x, y - aRadius)
-        dp(x + aRadius, y)
-        dp(x - aRadius, y)
-        while x1 < y1:
-            if f >= 0:
-                y1 -= 1
-                ddF_y += 2
-                f += ddF_y
-            x1 += 1
-            ddF_x += 2
-            f += ddF_x
-
-            dp(x + x1, y + y1)
-            dp(x - x1, y + y1)
-            dp(x + x1, y - y1)
-            dp(x - x1, y - y1)
-            dp(x + y1, y + x1)
-            dp(x - y1, y + x1)
-            dp(x + y1, y - x1)
-            dp(x - y1, y - x1)
 
     # @micropython.native
     def Draw_Pixel(self, x, y):
@@ -397,39 +171,6 @@ class TFT(object):
         self._writedata(self.colorData)
 
     # @micropython.native
-    def fillcircle(self, aPos, aRadius, aColor, corename=3, delta=0):
-        x, y = aPos
-        radius = aRadius
-
-        self.colorData[0] = aColor >> 8
-        self.colorData[1] = aColor
-
-        vline = self.vline
-        vline((x, y - radius), 2 * radius + 1, aColor)
-        x0 = x
-        y0 = y
-        r = radius
-
-        f = 1 - r
-        ddF_x = 1
-        ddF_y = -2 * r
-        x = 0
-        y = r
-
-        while x < y:
-            if f >= 0:
-                y -= 1
-                ddF_y += 2
-                f += ddF_y
-            x += 1
-            ddF_x += 2
-            f += ddF_x
-            if corename & 0x1:
-                vline((x0 + x, y0 - y), 2 * y + 1 + delta, aColor)
-                vline((x0 + y, y0 - x), 2 * x + 1 + delta, aColor)
-            if corename & 0x2:
-                vline((x0 - x, y0 - y), 2 * y + 1 + delta, aColor)
-                vline((x0 - y, y0 - x), 2 * x + 1 + delta, aColor)
 
     # @micropython.native
     def fill(self, aColor=None):
@@ -443,9 +184,6 @@ class TFT(object):
         self.fillrect((0, 0), self._size, self.background_color)
 
     # @micropython.native
-    def image(self, x0, y0, x1, y1, data):
-        self._setwindowloc((x0, y0), (x1, y1))
-        self._writedata(data)
 
     # def setvscroll(self, tfa, bfa):
     #     ''' set vertical scroll area '''
@@ -470,19 +208,17 @@ class TFT(object):
     #     data2 = bytearray([addr >> 8, addr & 0xff])
     #     self._writedata(data2)
 
-    #   @micropython.native
     def _setColor(self, aColor):
         self.colorData[0] = aColor >> 8
         self.colorData[1] = aColor
         self.buf = bytes(self.colorData) * 32
 
-    #   @micropython.native
     def _draw(self, aPixels):
         # Send given color to the device aPixels times.
         write = self.spi.write
-        cs = self.cs
+        cs = self.cs.value
 
-        self.dc(1)
+        self.dc.value(1)
         cs(0)
         for i in range(aPixels // 32):
             write(self.buf)
@@ -535,8 +271,8 @@ class TFT(object):
     # @micropython.native
     def _writecommand(self, aCommand):
         # Write given command to the device.
-        cs = self.cs
-        self.dc(0)
+        cs = self.cs.value
+        self.dc.value(0)
         cs(0)
         self.spi.write(bytearray([aCommand]))
         cs(1)
@@ -545,18 +281,13 @@ class TFT(object):
     def _writedata(self, aData):
         # Write given data to the device.  This may be
         # either a single int or a bytearray of values.
-        cs = self.cs
-        self.dc(1)
+        cs = self.cs.value
+        self.dc.value(1)
         cs(0)
         self.spi.write(aData)
         cs(1)
 
     # @micropython.native
-    def _pushcolor(self, aColor):
-        # Push given color to the device.
-        self.colorData[0] = aColor >> 8
-        self.colorData[1] = aColor
-        self._writedata(self.colorData)
 
     # @micropython.native
     def _reset(self):
@@ -632,8 +363,8 @@ class TFT(object):
     # @micropython.native
     def register(self, cmd, data):
         write = self.spi.write
-        dc = self.dc
-        cs = self.cs
+        dc = self.dc.value
+        cs = self.cs.value
 
         dc(0)
         cs(0)
@@ -655,8 +386,8 @@ class TFT(object):
     #         # self._setwindowloc(aPos, (aPos[0]+width, aPos[1]+height))
     #         self._setwindowloc(aPos, (aPos[0] + w, aPos[1] + h))
     #         f.seek(starts_at)
-    #         self.dc(1)
-    #         self.cs(0)
+    #         self.dc.value(1)
+    #         self.cs.value(0)
     #         buf = bytearray(32)
     #         for _ in range(l // 32):
     #             f.readinto(buf)
@@ -673,8 +404,8 @@ class TFT(object):
             print(f"{width}x{height}")
             l = width * height * 2
             self._setwindowloc(aPos, (aPos[0] + width - 1, aPos[1] + height - 1))
-            self.dc(1)
-            self.cs(0)
+            self.dc.value(1)
+            self.cs.value(0)
             # self.spi.write(f.read(l))
             buf = bytearray(64)
             r = f.readinto
@@ -688,13 +419,7 @@ class TFT(object):
             self.cs.value(1)
         return width, height
 
-
-tft = TFT(config.spi, aDC=16, aReset=17, aCS=4)
-tft.init()
 # tft.fill(0x1f)
-tft.fill(0x198a)
-tft.rotation(0)
-
 
 # def test():
 #     x, y = 0, 0
@@ -719,5 +444,5 @@ tft.rotation(0)
 #     tft.text((10, 10), f"Hello There {i}", random.randrange(0xFFFF), sysfont)
 #     tft.text((10, 30), "Hi..", random.randrange(0xFFFF), sysfont)
 
-# tft.text((10, 100), f"Hello There", 0xFFFF, aSize=2, aBG=TFT.BLUE)
 # tft.text((10, 130), "Hi..", 0xFFFF, aBG=TFT.BLUE)
+# time.sleep_ms(1000)
