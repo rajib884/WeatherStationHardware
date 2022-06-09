@@ -1,6 +1,4 @@
-# driver for Sainsmart 1.8" TFT display ST7735
-# Translated by Guy Carver from the ST7735 sample code.
-# Modirfied for micropython-esp32 by boochow
+# driver for 2.2" TFT display ILI9225
 import math
 
 import machine
@@ -9,12 +7,8 @@ import time
 import micropython
 
 
-
-# # @micropython.native
 def clamp(aValue, aMin, aMax):
     return max(aMin, min(aMax, aValue))
-
-
 
 
 def split_i16(i):
@@ -37,17 +31,7 @@ class TFT(object):
         self.windowLocData = bytearray(4)
 
         self.text_color = 0xffff
-        # self.background_color = 0x1f  # Blue
         self.background_color = 0x0
-
-
-    # def on(self, aTF=True):  #todo
-    #     '''Turn display on or off.'''
-    #     self._writecommand(TFT.DISPON if aTF else TFT.DISPOFF)
-
-    # def invertcolor(self, aBool):  #todo
-    #     '''Invert the color data IE: Black = White.'''
-    #     self._writecommand(TFT.INVON if aBool else TFT.INVOFF)
 
     def rotation(self, aRot):
         r = aRot & 3  # rotation
@@ -67,8 +51,16 @@ class TFT(object):
         self._setwindowloc((0, 0), self._size)
         self.vert_scroll(0, self._size[1], 0)
 
-
-    # @micropython.native
+    def vert_scroll(self, top, scrollines, offset):
+        if offset <= -scrollines or offset >= scrollines:
+            offset = 0
+        vsp = top + offset
+        if offset < 0:
+            vsp += scrollines
+        sea = top + scrollines - 1
+        self.register(0x32, top)
+        self.register(0x31, sea)
+        self.register(0x33, vsp - top)
 
     def text(self, aPos, aString, nowrap=False):
         fw = 8
@@ -106,9 +98,6 @@ class TFT(object):
                     w(buf)
                 self.cs.value(1)
 
-
-    # @micropython.native
-
     def vline(self, aStart, aLen, aColor):
         # Draw a vertical line from aStart for aLen. aLen may be negative.
         start = (clamp(aStart[0], 0, self._size[0]), clamp(aStart[1], 0, self._size[1]))
@@ -131,7 +120,6 @@ class TFT(object):
         self._setColor(aColor)
         self._draw(aLen)
 
-
     def fillrect(self, aStart, aSize, aColor):
         # Draw a filled rectangle.  aStart is the smallest coordinate corner
         # and aSize is a tuple indicating width, height.
@@ -152,8 +140,6 @@ class TFT(object):
         self._setColor(aColor)
         self._draw(numPixels)
 
-
-    # @micropython.native
     def Draw_Pixel(self, x, y):
         if self.rotate & 1:
             y, x = x, y
@@ -170,43 +156,14 @@ class TFT(object):
         self._writecommand(0x22)
         self._writedata(self.colorData)
 
-    # @micropython.native
-
-    # @micropython.native
     def fill(self, aColor=None):
         # Fill screen with the given color.
         if aColor is None:
             aColor = self.background_color
         self.fillrect((0, 0), self._size, aColor)
 
-    # @micropython.native
     def clear(self):
         self.fillrect((0, 0), self._size, self.background_color)
-
-    # @micropython.native
-
-    # def setvscroll(self, tfa, bfa):
-    #     ''' set vertical scroll area '''
-    #     self._writecommand(TFT.VSCRDEF)
-    #     data2 = bytearray([0, tfa])
-    #     self._writedata(data2)
-    #     data2[1] = 162 - tfa - bfa
-    #     self._writedata(data2)
-    #     data2[1] = bfa
-    #     self._writedata(data2)
-    #     self.tfa = tfa
-    #     self.bfa = bfa
-
-    # def vscroll(self, value):
-    #     a = value + self.tfa
-    #     if (a + self.bfa > 162):
-    #         a = 162 - self.bfa
-    #     self._vscrolladdr(a)
-
-    # def _vscrolladdr(self, addr):
-    #     self._writecommand(TFT.VSCSAD)
-    #     data2 = bytearray([addr >> 8, addr & 0xff])
-    #     self._writedata(data2)
 
     def _setColor(self, aColor):
         self.colorData[0] = aColor >> 8
@@ -228,7 +185,6 @@ class TFT(object):
             write(buf2)
         cs(1)
 
-    # @micropython.native
     def _setwindowpoint(self, aPos):
         # Set a single point for drawing a color to.
         x, y = aPos
@@ -246,10 +202,9 @@ class TFT(object):
             reg(cmd, math.ceil(data))
         self._writecommand(0x22)
 
-    # @micropython.native
     def _setwindowloc(self, aPos0, aPos1):
-        x1, y1 = aPos0  # 0, 0
-        x2, y2 = aPos1  # 219, 175
+        x1, y1 = aPos0
+        x2, y2 = aPos1
         x = x1
         y = y1
         if self.rotate & 1:
@@ -268,7 +223,6 @@ class TFT(object):
             reg(cmd, math.ceil(data))
         self._writecommand(0x22)
 
-    # @micropython.native
     def _writecommand(self, aCommand):
         # Write given command to the device.
         cs = self.cs.value
@@ -277,7 +231,6 @@ class TFT(object):
         self.spi.write(bytearray([aCommand]))
         cs(1)
 
-    # @micropython.native
     def _writedata(self, aData):
         # Write given data to the device.  This may be
         # either a single int or a bytearray of values.
@@ -287,9 +240,6 @@ class TFT(object):
         self.spi.write(aData)
         cs(1)
 
-    # @micropython.native
-
-    # @micropython.native
     def _reset(self):
         # Reset the device.
         dc = self.dc
@@ -304,7 +254,6 @@ class TFT(object):
         reset(1)
         delay(500)
 
-    # @micropython.native
     def init(self):
         self._reset()
         # XC=0x20,YC=0x21,CC=0x22,RC=0x22,SC1=0x31,SC2=0x33,MD=0x03,VL=1,R24BIT=0;
@@ -360,7 +309,6 @@ class TFT(object):
             else:
                 reg(cmd, data)
 
-    # @micropython.native
     def register(self, cmd, data):
         write = self.spi.write
         dc = self.dc.value
@@ -373,30 +321,6 @@ class TFT(object):
         write(bytearray(split_i16(data)))
         cs(1)
 
-    # def show_bmp(self, file, aPos=(0, 0)):
-    #     # https://en.wikipedia.org/wiki/BMP_file_format
-    #     with open(file, 'rb') as f:
-    #         f.seek(0xA)
-    #         starts_at = int.from_bytes(f.read(4), 'little')
-    #         f.seek(0x12)
-    #         w = int.from_bytes(f.read(4), 'little')
-    #         h = int.from_bytes(f.read(4), 'little')
-    #         l = w * h * 2
-    #         print(f"sa: {hex(starts_at)}, {starts_at}\n{w}x{h}")
-    #         # self._setwindowloc(aPos, (aPos[0]+width, aPos[1]+height))
-    #         self._setwindowloc(aPos, (aPos[0] + w, aPos[1] + h))
-    #         f.seek(starts_at)
-    #         self.dc.value(1)
-    #         self.cs.value(0)
-    #         buf = bytearray(32)
-    #         for _ in range(l // 32):
-    #             f.readinto(buf)
-    #             self.spi.write(buf)
-    #         f.readinto(buf)
-    #         self.spi.write(buf[:l % 30])
-    #         self.cs.value(1)
-
-    # @micropython.native
     def show_imgbuf(self, file, aPos=(0, 0)):
         with open(file, 'rb') as f:
             width = int.from_bytes(f.read(1), 'little')
@@ -418,31 +342,3 @@ class TFT(object):
                 w(buf[:l % 64])
             self.cs.value(1)
         return width, height
-
-# tft.fill(0x1f)
-
-# def test():
-#     x, y = 0, 0
-#     max_h = 0
-#     for file in os.listdir():
-#         if file[-7:] == '.imgbuf':
-#             w, h = tft.show_imgbuf(file, (x, y))
-#             x += w + 1
-#             max_h = max(h, max_h)
-#             if x > 160:
-#                 y += max_h
-#                 x = 0
-#                 max_h = 0
-#     time.sleep_ms(1000)
-
-
-# test()
-# tft.fillrect((0, 0), (170, 200), random.randrange(0, 0xFFFF))
-
-# for i in range(4):
-#     tft.rotation(i)
-#     tft.text((10, 10), f"Hello There {i}", random.randrange(0xFFFF), sysfont)
-#     tft.text((10, 30), "Hi..", random.randrange(0xFFFF), sysfont)
-
-# tft.text((10, 130), "Hi..", 0xFFFF, aBG=TFT.BLUE)
-# time.sleep_ms(1000)
