@@ -196,12 +196,13 @@ class TFT(object):
 
         self.dc.value(1)
         cs(0)
+        buf = self.buf
         for i in range(aPixels // 32):
-            write(self.buf)
+            write(buf)
         rest = (int(aPixels) % 32)
         if rest > 0:
-            buf2 = bytes(self.colorData) * rest
-            write(buf2)
+            # buf2 = bytes(self.colorData) * rest
+            write(buf[:rest])
         cs(1)
 
     def _setwindowpoint(self, aPos):
