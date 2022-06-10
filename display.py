@@ -16,7 +16,7 @@ class Display:
         sck=machine.Pin(14),
         mosi=machine.Pin(13),
         miso=machine.Pin(12)
-    ), aDC=16, aReset=17, aCS=12)
+    ), aDC=26, aReset=27, aCS=12)
 
     def __init__(self):
         self.offset_x = 4
@@ -61,6 +61,7 @@ class Display:
         self.skip_line()
 
     def make_layout(self):
+        self.clear()
         icon = self.icon
         if config.sta_enable:
             icon('imgbuf/wifi.imgbuf', 0, 0)
@@ -94,7 +95,9 @@ class Display:
         self.cpos_y += 1
 
     def clear(self):
+        self.lock.acquire()
         self.tft.clear()
+        self.lock.release()
         self.cpos_x = 0
         self.cpos_y = 0
 
