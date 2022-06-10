@@ -1,6 +1,5 @@
 import gc
 import os
-import sys
 import time
 
 import dht
@@ -17,14 +16,13 @@ try:
 except ModuleNotFoundError:
     import requests
 
-import sdcard
+# import sdcard
 from ntime import datetime
 from anemometer import anemometer
+from menu import menu
 from bmp180 import BMP180
 from wifimngr import wifi
 from local_server import server
-from rotary import Rotary
-from rotary_irq_esp import RotaryIRQ
 
 file_lock = _thread.allocate_lock()
 
@@ -63,8 +61,8 @@ def main():
     display.print("SD Card..")
     gc.collect()
     print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
-    sd = sdcard.SDCard(config.spi, machine.Pin(config.cs_sd))
-    os.mount(sd, '/sd')
+    # sd = sdcard.SDCard(config.spi, machine.Pin(config.cs_sd))
+    # os.mount(sd, '/sd')
     # lcd.move_to(0, 1)
     display.print(" Mounted", overwrite=True, x=7)
     print("SD Card Mounted")
@@ -102,17 +100,6 @@ def main():
     # print(response.content)
     gc.collect()
     display.print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
-    r = RotaryIRQ(
-        pin_num_clk=34,
-        pin_num_dt=35,
-        min_val=0,
-        max_val=10,
-        reverse=False,
-        range_mode=Rotary.RANGE_UNBOUNDED,
-        pull_up=False,
-        half_step=True,
-        invert=False
-    )
     time.sleep_ms(2000)
     display.clear()
     display.make_layout()
@@ -166,14 +153,19 @@ def main():
         display.print(f"{anemometer.cardinal:<2}", x=16, y=4)
         # display.print(f"{r.value()}", x=3, y=6)
         gc.collect()
-        print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
 
+        if menu.waiting:
+            menu.takeover()
         while time.ticks_diff(time.ticks_ms(), start) < config.delay_reading:
+            if menu.waiting:
+                menu.takeover()
             time.sleep_ms(100)
 
 
 def show_time():
     while 1:
+        if menu.waiting:
+            display.print("Wait", x=0, y=13)
         if wifi.wlan_sta.active():
             if wifi.wlan_sta.isconnected():
                 display.icon('imgbuf/wifi.imgbuf', 0, 0)
