@@ -68,12 +68,12 @@ class Menu:
         self.clear()
         # display.print(f"{self.rotary.value()}", x=2, y=2)
         self.options = [
-            "Hello",
-            "Option 1",
-            "Second Option",
-            "Option The Third",
-            "Huh?",
-            "Cancel",
+            "Server Settings",
+            "Device Settings",
+            "WiFi Settings",
+            "Other Settings",
+            "Save",
+            "Back",
         ]
         self.draw_menu()
         self.draw_cursor()

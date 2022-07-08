@@ -34,7 +34,7 @@ class Config:
             "gmt": 6,
         }
         # TODO: remove this line
-        self.write_config()
+        # self.write_config()
         self.read_config()
         self.i2c = machine.SoftI2C(
             scl=machine.Pin(self.scl),

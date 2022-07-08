@@ -146,11 +146,11 @@ def main():
         f.close()
         file_lock.release()
 
-        display.print(f"{bmp180.temperature:05.2f}{chr(186)}C", x=3, y=2)
-        display.print(f"{dht11.humidity():02d}%", x=16, y=2)
-        display.print(f"{bmp180.pressure / 101325:07.5f} atm", x=3, y=3)
-        display.print(f"{anemometer.speed:3.1f} km/h", x=3, y=4)
-        display.print(f"{anemometer.cardinal:<2}", x=16, y=4)
+        display.print(f"{bmp180.temperature:05.2f}{chr(186)}C", x=3, y=1)
+        display.print(f"{dht11.humidity():02d}%", x=16, y=1)
+        display.print(f"{bmp180.pressure / 101325:07.5f} atm", x=3, y=2)
+        display.print(f"{anemometer.speed:3.1f} km/h", x=3, y=3)
+        display.print(f"{anemometer.cardinal:<2}", x=16, y=3)
         # display.print(f"{r.value()}", x=3, y=6)
         gc.collect()
 
@@ -165,7 +165,7 @@ def main():
 def show_time():
     while 1:
         if menu.waiting:
-            display.print("Wait", x=0, y=13)
+            display.print("Wait", x=0, y=7)
         if wifi.wlan_sta.active():
             if wifi.wlan_sta.isconnected():
                 display.icon('imgbuf/wifi.imgbuf', 0, 0)
@@ -174,18 +174,18 @@ def show_time():
         else:
             display.icon('imgbuf/wifi-slash.imgbuf', 0, 0)
         if wifi.wlan_ap.active():
-            display.icon('imgbuf/signal-stream.imgbuf', 3, 0)
+            display.icon('imgbuf/signal-stream.imgbuf', 2, 0)
         else:
-            display.icon('imgbuf/signal-stream-slash.imgbuf', 3, 0)
-        display.print(datetime.time_str, y=0, x=13)
+            display.icon('imgbuf/signal-stream-slash.imgbuf', 2, 0)
+        display.print(datetime.time_str, y=0, x=10)
         if wifi.wlan_sta.isconnected():
-            display.print(f"{wifi.wlan_sta.ifconfig()[0]}:5000", center=True, fill=True, y=11, x=0)
+            display.print(f"{wifi.wlan_sta.ifconfig()[0]}:5000", center=True, fill=True, y=5, x=0)
         else:
-            display.print('---', center=True, y=11, x=0, fill=True)
+            display.print('---', center=True, y=5, x=0, fill=True)
         if wifi.wlan_ap.active():
-            display.print(f"{wifi.wlan_ap.ifconfig()[0]}:5000", center=True, fill=True, y=12, x=0)
+            display.print(f"{wifi.wlan_ap.ifconfig()[0]}:5000", center=True, fill=True, y=6, x=0)
         else:
-            display.print('---', center=True, fill=True, y=12, x=0)
+            display.print('---', center=True, fill=True, y=6, x=0)
         time.sleep_ms(500)
 
 
@@ -199,7 +199,7 @@ def send_data():
             time.sleep_ms(100)
             continue
 
-        display.print(f"Sending..", x=3, y=10, fill=True)
+        display.print(f"Sending..", x=3, y=4, fill=True)
         error = True
         # data = []
         # more_to_send = False
@@ -238,7 +238,7 @@ def send_data():
                     error = False
             except:
                 print("Error in http_post")
-        display.print('Error' if error else 'Sent', x=3, y=10, fill=True)
+        display.print('Error' if error else 'Sent', x=3, y=4, fill=True)
 
 
 if __name__ == '__main__':

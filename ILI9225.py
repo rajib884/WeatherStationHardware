@@ -63,15 +63,15 @@ class TFT(object):
         self.register(0x33, vsp - top)
 
     def text(self, aPos, aString, nowrap=False):
-        fw = 8
-        fh = 14
+        fw = 11
+        fh = 20
         px, py = aPos
         w = fw  # + 1
         # char = self.char
         start = 32
         end = 192
-        l = 8 * 14 * 2
-        buf = bytearray(14 * 2)
+        l = fw * fh * 2
+        buf = bytearray(fh * 2)
         dc = self.dc.value
         cs = self.cs.value
         with open('imgbuf/font.imgbuf', 'rb') as f:
@@ -82,10 +82,10 @@ class TFT(object):
                 ci = ord(c)
                 if start <= ci < end:
                     f.seek((ci - start) * l)
-                    self._setwindowloc((px, py), (px + 8 - 1, py + 14 - 1))
+                    self._setwindowloc((px, py), (px + fw - 1, py + fh - 1))
                     dc(1)
                     cs(0)
-                    for _ in range(8):
+                    for _ in range(fw):
                         r(buf)
                         write(buf)
                     cs(1)

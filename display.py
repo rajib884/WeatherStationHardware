@@ -21,8 +21,8 @@ class Display:
     def __init__(self):
         self.offset_x = 4
         self.offset_y = 5
-        self.height = 15
-        self.width = 8
+        self.height = 20+1
+        self.width = 11
 
         self.cpos_x = 0
         self.cpos_y = 0
@@ -30,6 +30,7 @@ class Display:
 
         self.tft.init()
         self.splash_title()
+        self.tft.rotation(1)
 
     def splash_title(self):
         self.lock.acquire()
@@ -58,7 +59,8 @@ class Display:
         self.tft.text((px, py), text, nowrap=True)
         self.lock.release()
 
-        self.skip_line()
+        self.cpos_x = 0
+        self.cpos_y = y + 1
 
     def make_layout(self):
         self.clear()
@@ -68,19 +70,19 @@ class Display:
         else:
             icon('imgbuf/wifi-slash.imgbuf', 0, 0)
         if config.ap_enable:
-            icon('imgbuf/signal-stream.imgbuf', 3, 0)
+            icon('imgbuf/signal-stream.imgbuf', 2, 0)
         else:
-            icon('imgbuf/signal-stream-slash.imgbuf', 3, 0)
-        icon('imgbuf/battery-bolt.imgbuf', 6, 0)
-        icon('imgbuf/clock.imgbuf', 11, 0)
+            icon('imgbuf/signal-stream-slash.imgbuf', 2, 0)
+        icon('imgbuf/battery-bolt.imgbuf', 4, 0)
+        icon('imgbuf/clock.imgbuf', 8, 0)
 
-        icon('imgbuf/temperature-half.imgbuf', 1, 2)
-        icon('imgbuf/droplet.imgbuf', 14, 2)
-        icon('imgbuf/water-arrow-down.imgbuf', 1, 3)
-        icon('imgbuf/fan.imgbuf', 1, 4)
-        icon('imgbuf/compass.imgbuf', 14, 4)
-        icon('imgbuf/server.imgbuf', 0, 10)
-        self.print("Menu", x=0, y=13)
+        icon('imgbuf/temperature-half.imgbuf', 1, 1)
+        icon('imgbuf/droplet.imgbuf', 14, 1)
+        icon('imgbuf/water-arrow-down.imgbuf', 1, 2)
+        icon('imgbuf/fan.imgbuf', 1, 3)
+        icon('imgbuf/compass.imgbuf', 14, 3)
+        icon('imgbuf/server.imgbuf', 0, 4)
+        self.print("Menu", x=0, y=7)
 
     def icon(self, file, x, y):
         self.lock.acquire()
