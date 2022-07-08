@@ -30,7 +30,7 @@ class WiFi:
         else:
             display.print("Connecting to Wifi..")
             if self.wlan_sta.isconnected():
-                display.print("Wifi Connected", x=2)
+                display.print("Wifi Connected", x=2, y=3)
             else:
                 self.wlan_sta.active(True)
                 networks = self.wlan_sta.scan()
@@ -42,15 +42,21 @@ class WiFi:
                     if authmode > 0:
                         if ssid in self.profiles:
                             connected = self.connect(ssid=ssid, password=self.profiles[ssid])
+                        else:
+                            continue
                     else:
                         continue
                         # don't connect to open wifi
                         # connected = self._connect(ssid, None)
                     if connected is not False:
-                        display.print("Wifi Connected", x=2)
+                        display.print("Wifi Connected", x=2, y=current_line+1)
                         break
                     else:
-                        display.print("Failed to connect", x=2)
+                        display.print("Failed to connect", x=2, y=current_line+1)
+                if not self.wlan_sta.isconnected():
+                    for ssid in self.profiles:
+                        print(f"Force to {ssid}")
+                        connected = self.connect(ssid=ssid, password=self.profiles[ssid])
 
         if config.ap_enable or not connected:
             display.print("Starting Hotspot")
@@ -122,6 +128,7 @@ class WiFi:
             self.write_profiles({ssid: password})
         else:
             print('\nFailed. Not Connected to: ' + ssid)
+            self.wlan_sta.disconnect()
         return connected
 
     def hotspot(self, target=True):
