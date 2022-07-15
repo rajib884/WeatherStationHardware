@@ -10,6 +10,8 @@ https://github.com/aaugustin/websockets/blob/master/websockets/client.py
 
 import ubinascii as binascii
 
+from config import config
+
 try:
     import urandom as random
 except ModuleNotFoundError:
@@ -281,7 +283,7 @@ def connect(uri):
 
     # if __debug__:
     #     LOGGER.debug("open connection %s:%s", uri.hostname, uri.port)
-    print("open connection %s:%s", uri.hostname, uri.port)
+    print(f"open connection {uri.hostname}:{uri.port}")
 
     sock = socket.socket()
     addr = socket.getaddrinfo(uri.hostname, uri.port)
@@ -301,6 +303,12 @@ def connect(uri):
     send_header(b'GET %s HTTP/1.1', uri.path or '/')
     send_header(b'Host: %s:%s', uri.hostname, uri.port)
     send_header(b'Connection: Upgrade')
+    send_header(b'Authorization: Token {auth}'.format(
+        auth=config.web_token)
+    )
+    send_header(b'Sensor: {sensor}'.format(
+        sensor=config.device_id)
+    )
     send_header(b'Upgrade: websocket')
     send_header(b'Sec-WebSocket-Key: %s', key)
     send_header(b'Sec-WebSocket-Version: 13')
