@@ -22,8 +22,11 @@ class Config:
             "web_server": "http://192.168.0.103:8000",
             "web_token": "966259f9553c20f6620737dc334b24ee31b6ae57",
             "device_id": 5,
+            # "web_server": "http://rajibweather.herokuapp.com",
+            # "web_token": "56183bc84f0824cc9e325eec4258ae33742d3f64",
+            # "device_id": 1,
             "delay_reading": 2000,
-            "delay_sending": 15000,
+            "save_to_sdcard": False,
 
             "sta_enable": True,
             "ap_enable": False,
