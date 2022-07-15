@@ -836,6 +836,10 @@ class Microdot():
                     elif 404 in self.error_handlers:
                         res = self.error_handlers[404](req)
                     else:
+                        for handler in self.before_request_handlers:
+                            res = handler(req)
+                            if res:
+                                break
                         res = 'Not found', 404
                 except Exception as exc:
                     print_exception(exc)
@@ -856,7 +860,10 @@ class Microdot():
             res = Response(*res)
         elif not isinstance(res, Response):
             res = Response(res)
-        res.write(stream)
+        try:
+            res.write(stream)
+        except OSError:
+            print("Could not write to stream")
         stream.close()
         if stream != sock:  # pragma: no cover
             sock.close()
