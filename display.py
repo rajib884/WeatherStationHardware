@@ -1,4 +1,5 @@
 import _thread
+
 import machine
 
 from ILI9225 import TFT
@@ -19,9 +20,12 @@ class Display:
     ), aDC=26, aReset=27, aCS=12)
 
     def __init__(self):
+        self.display_width = 220
+        self.display_height = 176
+
         self.offset_x = 4
-        self.offset_y = 5
-        self.height = 20+1
+        self.offset_y = 4
+        self.height = 20 + 1
         self.width = 11
 
         self.cpos_x = 0
@@ -55,6 +59,10 @@ class Display:
 
         px = self.width * x + self.offset_x
         py = self.height * y + self.offset_y
+        if py > self.display_height:
+            self.clear()
+            y = 0
+            py = self.offset_y
         self.lock.acquire()
         self.tft.text((px, py), text, nowrap=True)
         self.lock.release()
@@ -92,9 +100,6 @@ class Display:
         )
         self.lock.release()
 
-    def skip_line(self):
-        self.cpos_x = 0
-        self.cpos_y += 1
 
     def clear(self):
         self.lock.acquire()
