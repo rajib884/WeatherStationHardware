@@ -1,48 +1,37 @@
+import _thread
 import gc
+import json
 import os
 import time
 
 import dht
 import machine
-import json
-import _thread
 
+import uwebsockets
+from anemometer import anemometer
+from bmp180 import BMP180
 from config import config
 from display import display
-from req import http_post
-
-try:
-    import urequests as requests
-except ModuleNotFoundError:
-    import requests
-
-# import sdcard
-from ntime import datetime
-from anemometer import anemometer
-from menu import menu
-from bmp180 import BMP180
-from wifimngr import wifi
 from local_server import server
+from menu import menu
+from ntime import datetime
+from wifimngr import wifi
 
 file_lock = _thread.allocate_lock()
+ws = None
 
 try:
     os.remove("to_send.json")
     print("Removes 'to_send.json")
     display.print("Removed previous temp files")
-except:
+except OSError:
     pass
 
 
-# if p13.value():
-#     print("\n\nPin 13 is not low, exiting..\n\n")
-#     sys.exit()
-
-# def TFTColor(R, G, B):
-#     return ((R & 0xF8) << 8) | ((G & 0xFC) << 3) | (B >> 3)
-
-
 def main():
+    global file_lock
+    global ws
+
     display.clear()
     wifi.initialize()
 
@@ -57,15 +46,23 @@ def main():
     else:
         display.print('---', x=2)
 
-    gc.collect()
-    display.print("SD Card..")
-    gc.collect()
-    print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
-    # sd = sdcard.SDCard(config.spi, machine.Pin(config.cs_sd))
-    # os.mount(sd, '/sd')
-    # lcd.move_to(0, 1)
-    display.print(" Mounted", overwrite=True, x=7)
-    print("SD Card Mounted")
+    display.print('Getting time..', )
+    datetime.update()
+    print(f"Time is {datetime.datetime_str}")
+    display.print(datetime.date_str, x=2)
+    display.print(datetime.time_str, x=2)
+
+    print(f'Trying to connect to {config.web_server.replace("http", "ws")}/ws/sensor')
+    ws = uwebsockets.connect(f'{config.web_server.replace("http", "ws")}/ws/sensor')
+    if config.save_to_sdcard:
+        display.print("SD Card..")
+        gc.collect()
+        print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
+        # sd = sdcard.SDCard(config.spi, machine.Pin(config.cs_sd))
+        # os.mount(sd, '/sd')
+        # lcd.move_to(0, 1)
+        display.print(" Mounted", overwrite=True, x=7)
+        print("SD Card Mounted")
 
     dht11 = dht.DHT11(machine.Pin(config.dht))
     display.print("DHT..")
@@ -83,21 +80,6 @@ def main():
     bmp180.oversample_sett = 3
     display.print(" Initiated", overwrite=True, x=6)
 
-    display.print('Getting time..', )
-    datetime.update()
-    print(f"Time is {datetime.datetime_str}")
-    display.print(datetime.date_str, x=2)
-    display.print(datetime.time_str, x=2)
-
-    # lcd.clear()
-
-    # response = requests.post(
-    #     'http://192.168.0.103:8000/api/token',
-    #     headers={'Content-Type': 'application/json'},
-    #     data='{"username": "rajib884", "password": "admin"}'
-    # )
-    # print(response.status_code)
-    # print(response.content)
     gc.collect()
     display.print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
     time.sleep_ms(2000)
@@ -105,7 +87,8 @@ def main():
     display.make_layout()
 
     _thread.start_new_thread(show_time, ())
-    _thread.start_new_thread(send_data, ())
+    _thread.start_new_thread(check_ws, ())
+    # _thread.start_new_thread(send_data, ())
     while 1:
         start = time.ticks_ms()
         bmp180.blocking_read()
@@ -113,19 +96,21 @@ def main():
         anemometer.update()
         gc.collect()
         print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
-        while 1:
-            try:
-                f = open(f'sd/{datetime.date_str}.csv', 'a')
-                break
-            except OSError:
-                print("OSError, Retrying..")
-                time.sleep_ms(100)
         t = f"{datetime.datetime_str},{bmp180.temperature:07.4f},{bmp180.pressure:06.0f},{dht11.temperature():02d},{dht11.humidity():02d},{anemometer.cardinal}\n"
         print(t, end="")
-        f.write(t)
-        f.close()
+        if config.save_to_sdcard:
+            while 1:
+                try:
+                    f = open(f'sd/{datetime.date_str}.csv', 'a')
+                    break
+                except OSError:
+                    print("OSError, Retrying..")
+                    gc.collect()
+                    time.sleep_ms(100)
+            f.write(t)
+            f.close()
 
-        file_lock.acquire()
+        # file_lock.acquire()
         try:
             f = open("to_send.json", "r+")
             f.seek(-1, 2)
@@ -134,19 +119,31 @@ def main():
             f = open("to_send.json", "w")
             f.write("[")
         f.write(json.dumps({
-            'date': datetime.datetime_str,
-            'temperature': bmp180.temperature,
-            'humidity': int(round(dht11.humidity(), 0)),
-            'pressure': int(round(bmp180.pressure, 0)),
-            'sensor': config.device_id,
-            'air_speed': 0.0,
-            'air_direction': anemometer.cardinal,
+            'dt': datetime.datetime_str,  # date
+            'tm': bmp180.temperature,  # temperature
+            'hm': int(round(dht11.humidity(), 0)),  # humidity
+            'pr': int(round(bmp180.pressure, 0)),  # pressure
+            'as': 0.0,  # air_speed
+            'ad': anemometer.cardinal,  # air_direction
         }))
         f.write("]")
         f.close()
-        file_lock.release()
+        gc.collect()
+        # file_lock.release()
+        if ws.open:
+            print("Sending data..")
+            try:
+                f = open("to_send.json", "r")
+                ws.send(f.read())
+                f.close()
+                os.remove("to_send.json")
+                print("Sent")
+            except OSError:
+                print("OSError")
+                f.close()
+                ws._close()
 
-        display.print(f"{bmp180.temperature:05.2f}{chr(186)}C", x=3, y=1)
+        display.print(f"{bmp180.temperature:08.5f}{chr(186)}C", x=3, y=1)
         display.print(f"{dht11.humidity():02d}%", x=16, y=1)
         display.print(f"{bmp180.pressure / 101325:07.5f} atm", x=3, y=2)
         display.print(f"{anemometer.speed:3.1f} km/h", x=3, y=3)
@@ -163,6 +160,7 @@ def main():
 
 
 def show_time():
+    global ws
     while 1:
         if menu.waiting:
             display.print("Wait", x=0, y=7)
@@ -178,6 +176,12 @@ def show_time():
         else:
             display.icon('imgbuf/signal-stream-slash.imgbuf', 2, 0)
         display.print(datetime.time_str, y=0, x=10)
+
+        if ws is not None and ws.open:
+            display.print(f"Connected", x=3, y=4, fill=True)
+        else:
+            display.print(f"Disconnected", x=3, y=4, fill=True)
+
         if wifi.wlan_sta.isconnected():
             display.print(f"{wifi.wlan_sta.ifconfig()[0]}:5000", center=True, fill=True, y=5, x=0)
         else:
@@ -189,56 +193,75 @@ def show_time():
         time.sleep_ms(500)
 
 
-def send_data():
+def check_ws():
+    global ws
     while 1:
-        time.sleep_ms(config.delay_sending)
-        try:
-            os.stat("to_send.json")
-        except OSError:
-            print("No data available")
-            time.sleep_ms(100)
-            continue
+        if ws is not None:
+            if ws.open:
+                try:
+                    print(ws.recv())
+                except OSError:
+                    ws._close()
+                    print("OSError, Closing websocket")
+            else:
+                try:
+                    ws = uwebsockets.connect(f'{config.web_server.replace("http", "ws")}/ws/sensor')
+                    print("websocket reconnected")
+                except OSError:
+                    print("websocket reconnection failed")
+                    time.sleep_ms(1000)
 
-        display.print(f"Sending..", x=3, y=4, fill=True)
-        error = True
-        # data = []
-        # more_to_send = False
-        # file_lock.acquire()
-        # with open("to_send.json", "r") as f:
-        #     lines_read = 0
-        #     for line in f.readlines():
-        #         lines_read += 1
-        #         data.append(json.loads(line.strip()))
-        #         if lines_read >= config.max_line_send:
-        #             more_to_send = True
-        #             break
-        # file_lock.release()
-        # if len(data) > 0:
-        #     try:
-        #         headers = {
-        #             'Content-Type': 'application/json',
-        #             'Authorization': f'Token {config.web_token}'
-        #         }
-        #         response = requests.post(
-        #             f'{config.web_server}/api/sensors/add',
-        #             headers=headers,
-        #             data={}
-        #         )
-        #         print(response.status_code)
-        #         print(response.content.decode())
-        #         sent = response.status_code == 200
-        #     except OSError:
-        #         pass
-        # else:
-        #     error = False
-        if wifi.wlan_sta.isconnected():
-            try:
-                response, status_code = http_post(f'{config.web_server}/api/sensors/add', "to_send.json", file_lock)
-                if status_code == "200":
-                    error = False
-            except:
-                print("Error in http_post")
-        display.print('Error' if error else 'Sent', x=3, y=4, fill=True)
+
+# def send_data():
+#     while 1:
+#         time.sleep_ms(config.delay_sending)
+#         try:
+#             os.stat("to_send.json")
+#         except OSError:
+#             print("No data available")
+#             time.sleep_ms(100)
+#             continue
+#
+#         display.print(f"Sending..", x=3, y=4, fill=True)
+#         error = True
+#         # data = []
+#         # more_to_send = False
+#         # file_lock.acquire()
+#         # with open("to_send.json", "r") as f:
+#         #     lines_read = 0
+#         #     for line in f.readlines():
+#         #         lines_read += 1
+#         #         data.append(json.loads(line.strip()))
+#         #         if lines_read >= config.max_line_send:
+#         #             more_to_send = True
+#         #             break
+#         # file_lock.release()
+#         # if len(data) > 0:
+#         #     try:
+#         #         headers = {
+#         #             'Content-Type': 'application/json',
+#         #             'Authorization': f'Token {config.web_token}'
+#         #         }
+#         #         response = requests.post(
+#         #             f'{config.web_server}/api/sensors/add',
+#         #             headers=headers,
+#         #             data={}
+#         #         )
+#         #         print(response.status_code)
+#         #         print(response.content.decode())
+#         #         sent = response.status_code == 200
+#         #     except OSError:
+#         #         pass
+#         # else:
+#         #     error = False
+#         if wifi.wlan_sta.isconnected():
+#             try:
+#                 response, status_code = http_post(f'{config.web_server}/api/sensors/add', "to_send.json", file_lock)
+#                 if status_code == "200":
+#                     error = False
+#             except:
+#                 print("Error in http_post")
+#         display.print('Error' if error else 'Sent', x=3, y=4, fill=True)
 
 
 if __name__ == '__main__':
