@@ -76,7 +76,8 @@ class Time:
                 self.set_time_from_api()
                 self._last_updated = time.time()
                 return
-            except:
+            except BaseException as err:
+                print(f"Unexpected {err=}, {type(err)=}")
                 print("Synchronization Failed")
 
             try:
