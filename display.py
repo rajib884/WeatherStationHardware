@@ -20,6 +20,8 @@ class Display:
     ), aDC=26, aReset=27, aCS=12)
 
     def __init__(self):
+        self.debug = False
+
         self.display_width = 220
         self.display_height = 176
 
@@ -64,6 +66,8 @@ class Display:
             y = 0
             py = self.offset_y
         self.lock.acquire()
+        if self.debug:
+            self.tft.fillrect((px, py), (len(text) * self.width, self.height), 0x1f)
         self.tft.text((px, py), text, nowrap=True)
         self.lock.release()
 
@@ -82,24 +86,29 @@ class Display:
         else:
             icon('imgbuf/signal-stream-slash.imgbuf', 2, 0)
         icon('imgbuf/battery-bolt.imgbuf', 4, 0)
-        icon('imgbuf/clock.imgbuf', 8, 0)
+        icon('imgbuf/clock.imgbuf', 9, 0)
 
         icon('imgbuf/temperature-half.imgbuf', 1, 1)
         icon('imgbuf/droplet.imgbuf', 14, 1)
         icon('imgbuf/water-arrow-down.imgbuf', 1, 2)
         icon('imgbuf/fan.imgbuf', 1, 3)
         icon('imgbuf/compass.imgbuf', 14, 3)
-        icon('imgbuf/server.imgbuf', 0, 4)
+        icon('imgbuf/server.imgbuf', 0, 5)
         self.print("Menu", x=0, y=7)
 
     def icon(self, file, x, y):
         self.lock.acquire()
+        if self.debug:
+            self.tft.fillrect((self.offset_x + self.width * x, self.offset_y + self.height * y), (2 * self.width, self.height), 0x1f)
         self.tft.show_imgbuf(
             file,
             (self.offset_x + self.width * x, self.offset_y + self.height * y)
         )
         self.lock.release()
 
+    # def skip_line(self):
+    #     self.cpos_x = 0
+    #     self.cpos_y += 1
 
     def clear(self):
         self.lock.acquire()
