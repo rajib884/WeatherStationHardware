@@ -248,6 +248,36 @@ class Websocket:
 
         self.write_frame(opcode, buf)
 
+    # def send_file(self, f):
+    #     assert False
+    #     assert self.open
+    #     assert self.is_client
+    #     buf = buf.encode('utf-8')
+    #     data = f.read()
+    #     length = len(data)
+    #
+    #     byte1 = 0x80 | OP_TEXT
+    #     byte2 = 0x80
+    #
+    #     if length < 126:  # 126 is magic value to use 2-byte length header
+    #         byte2 |= length
+    #         self.sock.write(struct.pack('!BB', byte1, byte2))
+    #     elif length < (1 << 16):  # Length fits in 2-bytes
+    #         byte2 |= 126  # Magic code
+    #         self.sock.write(struct.pack('!BBH', byte1, byte2, length))
+    #     elif length < (1 << 64):
+    #         byte2 |= 127  # Magic code
+    #         self.sock.write(struct.pack('!BBQ', byte1, byte2, length))
+    #     else:
+    #         raise ValueError()
+    #
+    #     mask_bits = struct.pack('!I', random.getrandbits(32))
+    #     self.sock.write(mask_bits)
+    #
+    #     data = bytes(b ^ mask_bits[i % 4] for i, b in enumerate(data))
+    #
+    #     self.sock.write(data)
+
     def close(self, code=CLOSE_OK, reason=''):
         """Close the websocket."""
         if not self.open:
