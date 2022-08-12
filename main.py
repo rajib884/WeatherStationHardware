@@ -19,6 +19,7 @@ from wifimngr import wifi
 
 file_lock = _thread.allocate_lock()
 ws = None
+server_msg = ""
 
 try:
     os.remove("to_send.json")
@@ -52,8 +53,8 @@ def main():
     display.print(datetime.date_str, x=2)
     display.print(datetime.time_str, x=2)
 
-    print(f'Trying to connect to {config.web_server.replace("http", "ws")}/ws/sensor')
-    ws = uwebsockets.connect(f'{config.web_server.replace("http", "ws")}/ws/sensor')
+    # print(f'Trying to connect to {config.web_server.replace("http", "ws")}/ws/sensor')
+    # ws = uwebsockets.connect(f'{config.web_server.replace("http", "ws")}/ws/sensor')
     if config.save_to_sdcard:
         display.print("SD Card..")
         gc.collect()
@@ -95,8 +96,10 @@ def main():
         dht11.measure()
         anemometer.update()
         gc.collect()
+
+        pressure = bmp180.pressure / 101325
         print(f"{100 * gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free()):0.2f}% RAM used")
-        t = f"{datetime.datetime_str},{bmp180.temperature:07.4f},{bmp180.pressure:06.0f},{dht11.temperature():02d},{dht11.humidity():02d},{anemometer.cardinal}\n"
+        t = f"{datetime.datetime_str},{bmp180.temperature:07.4f},{pressure:09.7f},{dht11.temperature():02d},{dht11.humidity():02d},{anemometer.speed},{anemometer.cardinal}\n"
         print(t, end="")
         if config.save_to_sdcard:
             while 1:
@@ -121,16 +124,16 @@ def main():
         f.write(json.dumps({
             'dt': datetime.datetime_str,  # date
             'tm': bmp180.temperature,  # temperature
-            'hm': int(round(dht11.humidity(), 0)),  # humidity
-            'pr': int(round(bmp180.pressure, 0)),  # pressure
-            'as': 0.0,  # air_speed
+            'hm': dht11.humidity(),  # humidity
+            'pr': pressure,  # pressure
+            'as': anemometer.speed,  # air_speed
             'ad': anemometer.cardinal,  # air_direction
         }))
         f.write("]")
         f.close()
         gc.collect()
         # file_lock.release()
-        if ws.open:
+        if ws is not None and ws.open:
             print("Sending data..")
             try:
                 f = open("to_send.json", "r")
@@ -145,7 +148,7 @@ def main():
 
         display.print(f"{bmp180.temperature:08.5f}{chr(186)}C", x=3, y=1)
         display.print(f"{dht11.humidity():02d}%", x=16, y=1)
-        display.print(f"{bmp180.pressure / 101325:07.5f} atm", x=3, y=2)
+        display.print(f"{pressure:09.7f} atm", x=3, y=2)
         display.print(f"{anemometer.speed:3.1f} km/h", x=3, y=3)
         display.print(f"{anemometer.cardinal:<2}", x=16, y=3)
         # display.print(f"{r.value()}", x=3, y=6)
@@ -175,18 +178,16 @@ def show_time():
             display.icon('imgbuf/signal-stream.imgbuf', 2, 0)
         else:
             display.icon('imgbuf/signal-stream-slash.imgbuf', 2, 0)
-        display.print(datetime.time_str, y=0, x=10)
+        display.print(datetime.time_str, y=0, x=11)
 
         if ws is not None and ws.open:
-            display.print(f"Connected", x=3, y=4, fill=True)
+            display.print(f"Connected {server_msg}", x=3, y=5, fill=True)
         else:
-            display.print(f"Disconnected", x=3, y=4, fill=True)
+            display.print(f"Disconnected", x=3, y=5, fill=True)
 
         if wifi.wlan_sta.isconnected():
-            display.print(f"{wifi.wlan_sta.ifconfig()[0]}:5000", center=True, fill=True, y=5, x=0)
-        else:
-            display.print('---', center=True, y=5, x=0, fill=True)
-        if wifi.wlan_ap.active():
+            display.print(f"{wifi.wlan_sta.ifconfig()[0]}:5000", center=True, fill=True, y=6, x=0)
+        elif wifi.wlan_ap.active():
             display.print(f"{wifi.wlan_ap.ifconfig()[0]}:5000", center=True, fill=True, y=6, x=0)
         else:
             display.print('---', center=True, fill=True, y=6, x=0)
@@ -194,22 +195,30 @@ def show_time():
 
 
 def check_ws():
-    global ws
+    global ws, server_msg
+    config.reload_server = False
     while 1:
-        if ws is not None:
-            if ws.open:
-                try:
-                    print(ws.recv())
-                except OSError:
-                    ws._close()
-                    print("OSError, Closing websocket")
-            else:
-                try:
-                    ws = uwebsockets.connect(f'{config.web_server.replace("http", "ws")}/ws/sensor')
-                    print("websocket reconnected")
-                except OSError:
-                    print("websocket reconnection failed")
-                    time.sleep_ms(1000)
+        if ws is not None and ws.open:
+            try:
+                server_msg = ws.recv()
+                print(server_msg)
+            except OSError:
+                ws._close()
+                print("OSError, Closing websocket")
+        else:
+            try:
+                ws = uwebsockets.connect(f'{config.web_server.replace("http", "ws")}/ws/sensor')
+                print("websocket reconnected")
+            except OSError:
+                print("websocket reconnection failed")
+                time.sleep_ms(1000)
+            except AssertionError:
+                print("Assertion Error, websocket reconnection failed")
+                time.sleep_ms(1000)
+        if ws is not None and config.reload_server:
+            print("Reloading Server")
+            ws.close()
+            config.reload_server = False
 
 
 # def send_data():
